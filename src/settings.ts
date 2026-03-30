@@ -1,5 +1,5 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
-import MyPlugin from "./main";
+import LinkTypology from "./main";
 
 export interface MyPluginSettings {
 	mySetting: string;
@@ -10,9 +10,9 @@ export const DEFAULT_SETTINGS: MyPluginSettings = {
 }
 
 export class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: LinkTypology;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: LinkTypology) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

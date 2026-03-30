@@ -3,6 +3,7 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 import { globalIgnores } from "eslint/config";
 
+// @ts-ignore
 export default tseslint.config(
 	{
 		languageOptions: {
@@ -31,4 +32,9 @@ export default tseslint.config(
 		"versions.json",
 		"main.js",
 	]),
+	// {
+	// 	rules: {
+	// 		"@obsidianmd/ui/sentence-case": "off"
+	// 	}
+	// }
 );

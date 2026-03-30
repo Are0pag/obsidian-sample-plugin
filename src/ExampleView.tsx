@@ -1,12 +1,15 @@
-import { StrictMode } from 'react';
+// example-view.tsx
+import React, { StrictMode, useRef, useEffect } from 'react';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { Root, createRoot } from 'react-dom/client';
-import { ReactView } from './ReactView';
+import {DraftSlateEditor, DraftSlateEditorRef} from "./comps/draft/Draft";
 
-const VIEW_TYPE_EXAMPLE = 'example-view';
 
-class ExampleView extends ItemView {
+export const VIEW_TYPE_EXAMPLE = 'example-view' as const;
+
+export class ExampleView extends ItemView {
 	root: Root | null = null;
+	editorRef: React.RefObject<DraftSlateEditorRef | null> = React.createRef();
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -22,14 +25,52 @@ class ExampleView extends ItemView {
 
 	async onOpen() {
 		this.root = createRoot(this.contentEl);
-		this.root.render(
-			<StrictMode>
-				<ReactView />,
-			</StrictMode>,
-		);
+
+		// Компонент-обертка для доступа к ref
+		const EditorWrapper = () => {
+			return (
+				<StrictMode>
+					<DraftSlateEditor
+						ref={this.editorRef}
+						onChange={(text) => {
+							console.log('Текст изменен:', text);
+						}}
+						placeholder="Введите текст или получите данные с сервера..."
+					/>
+				</StrictMode>
+			);
+		};
+
+		this.root.render(<EditorWrapper />);
 	}
 
 	async onClose() {
 		this.root?.unmount();
+	}
+
+	// Публичный метод для изменения текста извне
+	setEditorText(text: string) {
+		this.editorRef.current?.setText(text);
+	}
+
+	// Публичный метод для получения текста
+	getEditorText(): string {
+		return this.editorRef.current?.getText() || '';
+	}
+
+	// Публичный метод для вставки текста
+	insertEditorText(text: string) {
+		this.editorRef.current?.insertText(text);
+	}
+
+	// Публичный метод для очистки
+	clearEditorText() {
+		this.editorRef.current?.clearText();
+	}
+
+
+	// Публичный метод для фокуса
+	focusEditor() {
+		this.editorRef.current?.focus();
 	}
 }
