@@ -1,19 +1,19 @@
 import {App, Editor, MarkdownView, Modal, Notice, Plugin, View, WorkspaceLeaf} from 'obsidian';
 import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
 import { createContext } from 'react';
-import {ExampleView, VIEW_TYPE_EXAMPLE} from "./ExampleView";
+import {DraftView, DRAFT_VIEW_TYPE} from "./DraftView";
 import {waitForCopy} from "./ICS/clipboardManager";
 
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
-	private exampleView: ExampleView | null = null;
+	private exampleView: DraftView | null = null;
 
 	async onload() {
 		await this.loadSettings();
 
-		this.registerView(VIEW_TYPE_EXAMPLE, (leaf) => {
-			this.exampleView = new ExampleView(leaf);
+		this.registerView(DRAFT_VIEW_TYPE, (leaf) => {
+			this.exampleView = new DraftView(leaf);
 			return this.exampleView;
 		});
 		await this.activateView();
@@ -54,12 +54,12 @@ export default class LinkTypology extends Plugin {
 	async activateView() {
 		const { workspace } = this.app;
 
-		let leaf = workspace.getLeavesOfType(VIEW_TYPE_EXAMPLE)[0];
+		let leaf = workspace.getLeavesOfType(DRAFT_VIEW_TYPE)[0];
 
 		if (!leaf) {
 			leaf = workspace.getRightLeaf(false) ?? undefined;
 			await leaf?.setViewState({
-				type: VIEW_TYPE_EXAMPLE,
+				type: DRAFT_VIEW_TYPE,
 				active: true,
 			});
 		}

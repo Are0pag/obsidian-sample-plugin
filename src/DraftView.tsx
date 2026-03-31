@@ -5,9 +5,9 @@ import { Root, createRoot } from 'react-dom/client';
 import {DraftSlateEditor, DraftSlateEditorRef} from "./comps/draft/Draft";
 
 
-export const VIEW_TYPE_EXAMPLE = 'example-view' as const;
+export const DRAFT_VIEW_TYPE = 'draft-view' as const;
 
-export class ExampleView extends ItemView {
+export class DraftView extends ItemView {
 	root: Root | null = null;
 	editorRef: React.RefObject<DraftSlateEditorRef | null> = React.createRef();
 
@@ -16,11 +16,11 @@ export class ExampleView extends ItemView {
 	}
 
 	getViewType() {
-		return VIEW_TYPE_EXAMPLE;
+		return DRAFT_VIEW_TYPE;
 	}
 
 	getDisplayText() {
-		return 'Example areo view';
+		return 'draft view';
 	}
 
 	async onOpen() {
