@@ -40,12 +40,14 @@ export const DraftSlateEditor = forwardRef<DraftSlateEditorRef, DraftSlateEditor
 		// Публичные методы через ref
 		useImperativeHandle(ref, () => ({
 			setText: (text: string) => {
-				debugger;
 				const slateValue = textToSlateValue(text);
 
 				// Правильный способ обновления всего контента в Slate:
 				// 1. Удаляем всё
-				Transforms.removeNodes(editor, { at: [0] });
+				Transforms.removeNodes(editor, {
+					at: [],
+					match: () => true, // Вместо where попробуйте match
+				});
 				// 2. Вставляем новое
 				Transforms.insertNodes(editor, slateValue);
 
@@ -61,10 +63,18 @@ export const DraftSlateEditor = forwardRef<DraftSlateEditorRef, DraftSlateEditor
 			},
 
 			clearText: () => {
-				editor.children = initialValue;
-				editor.onChange();
+				// 1. Сбрасываем выделение (Selection), чтобы Slate не искал путь старого курсора
+				Transforms.deselect(editor);
+
+				// 2. Удаляем все узлы программно
+				Transforms.removeNodes(editor, { at: [], match: () => true });
+
+				// 3. Вставляем пустой параграф (чтобы редактор не был совсем пустым)
+				Transforms.insertNodes(editor, [{ type: 'paragraph', children: [{ text: '' }] }]);
+
 				onChange?.('');
 			},
+
 
 			focus: () => {
 				ReactEditor.focus(editor);

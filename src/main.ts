@@ -73,6 +73,11 @@ export default class LinkTypology extends Plugin {
 			});
 		}
 
+		if (leaf === undefined) {
+			console.error("draft leaf is undefined", leaf);
+			return;
+		}
+
 		await workspace.revealLeaf(leaf);
 	}
 

@@ -1,0 +1,33 @@
+
+[FullName] = [иерарх.префиксное], при том, что все файлы лежат в корне
+
+###### Definitions
+...
+?explications:
+- expl1: [FullName.expl1]
+- expl2: [FullName.expl2]
+
+source: [[]]
+___
+...
+source: [[]]
+___
+
+###### Properties
+prop01: [FullName.prop01]
+
+###### Hierarchical relations
+genus: [[]]
+species:
+- [[]],
+- [[]],
+- [[]]
+
+###### Part-whole relations
+- [[]]
+- [[]]
+- [[]]
+
+
+
+
