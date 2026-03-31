@@ -22,13 +22,19 @@ prop: [FullName.PropName]
 ~~headingEnd~~
 
 ###### Hierarchical relations
-genus: [[]]
-species:
+genus {
+- [[]]
+}
+species {
 - [[]],
 - [[]],
 - [[]]
+}
+~~h~~
 
 ###### Part-whole relations
+part of: [[]]
+components:
 - [[]]
 - [[]]
 - [[]]

@@ -11,4 +11,5 @@ export  interface KeyWordsNamingConvention {
 	Property: "prop:",
 	Genus: "genus:",
 	Species: "species:",
+	End: "}"
 }
