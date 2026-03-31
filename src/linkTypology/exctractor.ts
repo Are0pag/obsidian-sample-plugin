@@ -13,9 +13,6 @@ export class LinkExtractor {
 		this.keyEnding = keyEnding;
 	}
 
-	/**
-	 * Извлекает ссылки из блока H6 до маркера ~~headingEnd~~
-	 */
 	public async extractFromH6(filePath: string, targetHeading: string, keyWord?: string ): Promise<LinkExtractResult> {
 		const file = this.app.vault.getAbstractFileByPath(filePath);
 
