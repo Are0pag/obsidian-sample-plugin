@@ -1,8 +1,7 @@
 import { StateEffect, StateField } from "@codemirror/state";
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate } from "@codemirror/view";
 
-// 1. Создаем "эффект" (событие изменения состояния)
-// Он говорит системе: "Вот новые координаты для подсветки"
+// эффект подсветки
 export const setHoverRange = StateEffect.define<{from: number, to: number} | null>();
 
 // 2. Создаем "поле состояния" (хранилище)

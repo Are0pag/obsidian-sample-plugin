@@ -2,6 +2,8 @@ import {setHoverRange} from "./hover";
 import {EditorView, ViewPlugin} from "@codemirror/view";
 import {ScanMode, TextScanner} from "./scanner";
 
+// Замыкание (Closure) — это способность функции «помнить» переменные из того места,
+// 	где она была создана, даже после того, как внешняя функция завершила работу.
 export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 	ViewPlugin.fromClass(class {
 		constructor(readonly view: EditorView) {}
@@ -10,16 +12,14 @@ export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 			mousemove(event: MouseEvent, view: EditorView) {
 				// Превращаем координаты мыши в позицию в тексте
 				const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-
 				if (pos == null) {
 					view.dispatch({ effects: setHoverRange.of(null) });
 					return;
 				}
 
-				// Используем ваш класс TextScanner для расчета границ
 				const range = scanner.getRange(view.state, pos, getMode());
 
-				// Обновляем состояние (это заставит hoverField перерисовать подсветку)
+				// Обновляем состояние
 				view.dispatch({ effects: setHoverRange.of(range) });
 			},
 

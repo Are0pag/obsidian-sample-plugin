@@ -1,6 +1,11 @@
 import { EditorState } from "@codemirror/state";
 
-export enum ScanMode { Word, Sentence, Paragraph }
+export enum ScanMode {
+	Word,
+	//Clause,    // Часть предложения (между запятыми/знаками)
+	Sentence,
+	Paragraph
+}
 
 export class TextScanner {
 	// Метод для получения диапазона

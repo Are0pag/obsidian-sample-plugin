@@ -6,6 +6,7 @@ import {waitForCopy} from "./ICS/clipboardManager";
 import {ScanMode, TextScanner} from "./entities/scanner";
 import {hoverField} from "./entities/hover";
 import {hoverPlugin} from "./entities/hoverPlugin";
+import {shiftEnumValue} from "./utils/ShiftEnumValue";
 
 
 export default class LinkTypology extends Plugin {
@@ -43,43 +44,40 @@ export default class LinkTypology extends Plugin {
 		// });
 
 		this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
-			if (!this.app.workspace.layoutReady) return;
-			if (this.isWaitingForTextCopy) return;
-			console.log("Wait text import")
-			this.isWaitingForTextCopy = true;
-			let currentText = await waitForCopy();
-			this.isWaitingForTextCopy = false;
-			console.log('Перехвачен текст:', currentText);
-
-			// Получаем активное представление (view)
-			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-
-			if (activeView) {
-				// Получаем объект редактора
-				const editor = activeView.editor;
-
-				// Вставляем текст в позицию курсора
-				editor.setValue(currentText);
-			}
-
-
-			//if (this.draftView) {
-				// 1. Заменить весь текст
-				//this.draftView.setEditorText(currentText);
-
-				// 2. Вставить текст в текущую позицию курсора
-				// this.draftView.insertText(currentText);
-
-				// 3. Очистить и вставить новый текст
-				// this.draftView.clearText();
-				// this.draftView.setText(currentText);
-
-				// 4. Фокусируемся на редакторе
-				//this.draftView.focus();
-			//}
-
-
+			//await this.catchBuffer();
 		});
+		this.registerDomEvent(document, 'pointerdown', (evt: PointerEvent) => {
+			if (evt.button === 3) {
+				evt.preventDefault();
+				this.currentMode = shiftEnumValue(ScanMode, this.currentMode, -1);
+			} else if (evt.button === 4) {
+				evt.preventDefault();
+				this.currentMode = shiftEnumValue(ScanMode, this.currentMode, 1);
+			}
+		});
+
+
+	}
+
+	private async catchBuffer() {
+		if (!this.app.workspace.layoutReady) return;
+		if (this.isWaitingForTextCopy) return;
+		console.log("Wait text import")
+		this.isWaitingForTextCopy = true;
+		let currentText = await waitForCopy();
+		this.isWaitingForTextCopy = false;
+		console.log('Перехвачен текст:', currentText);
+
+		// Получаем активное представление (view)
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+
+		if (activeView) {
+			// Получаем объект редактора
+			const editor = activeView.editor;
+
+			// Вставляем текст в позицию курсора
+			editor.setValue(currentText);
+		}
 	}
 
 	onunload() {
