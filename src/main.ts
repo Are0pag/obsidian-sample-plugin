@@ -7,16 +7,21 @@ import {waitForCopy} from "./ICS/clipboardManager";
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
-	private exampleView: DraftView | null = null;
+	private draftView: DraftView | null = null;
+	private isWaitingForTextCopy : boolean = false;
 
 	async onload() {
+		console.clear();
 		await this.loadSettings();
 
 		this.registerView(DRAFT_VIEW_TYPE, (leaf) => {
-			this.exampleView = new DraftView(leaf);
-			return this.exampleView;
+			this.draftView = new DraftView(leaf);
+			return this.draftView;
 		});
-		await this.activateView();
+
+		this.app.workspace.onLayoutReady(async () => {
+			await this.activateView();
+		});
 
 		this.addCommand({
 			id: 'open-react-view',
@@ -25,23 +30,27 @@ export default class LinkTypology extends Plugin {
 		});
 
 		this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
+			if (!this.app.workspace.layoutReady) return;
+			if (this.isWaitingForTextCopy) return;
 			console.log("Wait text import")
+			this.isWaitingForTextCopy = true;
 			let currentText = await waitForCopy();
+			this.isWaitingForTextCopy = false;
 			console.log('Перехвачен текст:', currentText);
 
-			if (this.exampleView) {
+			if (this.draftView) {
 				// 1. Заменить весь текст
-				this.exampleView.setEditorText(currentText);
+				this.draftView.setEditorText(currentText);
 
 				// 2. Вставить текст в текущую позицию курсора
-				// this.exampleView.insertText(currentText);
+				// this.draftView.insertText(currentText);
 
 				// 3. Очистить и вставить новый текст
-				// this.exampleView.clearText();
-				// this.exampleView.setText(currentText);
+				// this.draftView.clearText();
+				// this.draftView.setText(currentText);
 
 				// 4. Фокусируемся на редакторе
-				//this.exampleView.focus();
+				//this.draftView.focus();
 			}
 
 

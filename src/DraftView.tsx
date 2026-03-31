@@ -2,7 +2,8 @@
 import React, { StrictMode, useRef, useEffect } from 'react';
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { Root, createRoot } from 'react-dom/client';
-import {DraftSlateEditor, DraftSlateEditorRef} from "./comps/draft/Draft";
+import {DraftSlateEditor} from "./comps/draft/Draft";
+import {DraftSlateEditorRef} from "./comps/draft/DraftSlateEditorRef";
 
 
 export const DRAFT_VIEW_TYPE = 'draft-view' as const;
@@ -33,7 +34,7 @@ export class DraftView extends ItemView {
 					<DraftSlateEditor
 						ref={this.editorRef}
 						onChange={(text) => {
-							console.log('Текст изменен:', text);
+							//console.log('Текст изменен:', text);
 						}}
 						placeholder="Введите текст или получите данные с сервера..."
 					/>

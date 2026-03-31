@@ -3,7 +3,8 @@ import React, {forwardRef, useCallback, useImperativeHandle, useMemo} from 'reac
 import {BaseEditor, createEditor, Descendant, Transforms} from 'slate';
 import {Editable, ReactEditor, Slate, withReact} from 'slate-react';
 import {withHistory} from 'slate-history';
-import {slateToText, textToSlateValue} from "../../utils/slateTranslator"; // npm install slate slate-react slate-history
+import {slateToText, textToSlateValue} from "../../utils/slateTranslator";
+import {DraftSlateEditorRef} from "./DraftSlateEditorRef"; // npm install slate slate-react slate-history
 
 // Типизация для Slate
 type CustomElement = { type: 'paragraph'; children: CustomText[] };
@@ -15,15 +16,6 @@ declare module 'slate' {
 		Element: CustomElement;
 		Text: CustomText;
 	}
-}
-
-//  иногда родительскому компоненту нужно напрямую «приказать» дочернему что-то сделать (например, очистить поле или поставить фокус)
-export interface DraftSlateEditorRef {
-	setText: (text: string) => void;
-	getText: () => string;
-	insertText: (text: string) => void;
-	clearText: () => void;
-	focus: () => void;
 }
 
 // Начальное значение
@@ -48,6 +40,7 @@ export const DraftSlateEditor = forwardRef<DraftSlateEditorRef, DraftSlateEditor
 		// Публичные методы через ref
 		useImperativeHandle(ref, () => ({
 			setText: (text: string) => {
+				debugger;
 				const slateValue = textToSlateValue(text);
 
 				// Правильный способ обновления всего контента в Slate:
