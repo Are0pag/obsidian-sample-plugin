@@ -3,31 +3,44 @@ import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
 import { createContext } from 'react';
 import {DraftView, DRAFT_VIEW_TYPE} from "./DraftView";
 import {waitForCopy} from "./ICS/clipboardManager";
+import {ScanMode, TextScanner} from "./entities/scanner";
+import {hoverField} from "./entities/hover";
+import {hoverPlugin} from "./entities/hoverPlugin";
 
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
-	private draftView: DraftView | null = null;
+	//private draftView: DraftView | null = null;
 	private isWaitingForTextCopy : boolean = false;
+	scanner: TextScanner;
+	currentMode: ScanMode = ScanMode.Sentence;
 
 	async onload() {
 		console.clear();
 		await this.loadSettings();
+		this.scanner = new TextScanner();
 
-		this.registerView(DRAFT_VIEW_TYPE, (leaf) => {
-			this.draftView = new DraftView(leaf);
-			return this.draftView;
-		});
+		// Регистрируем расширения CodeMirror 6
+		this.registerEditorExtension([
+			hoverField,
+			// Передаем инстанс сканера и текущий режим в плагин визуализации
+			hoverPlugin(this.scanner, () => this.currentMode)
+		]);
 
-		this.app.workspace.onLayoutReady(async () => {
-			await this.activateView();
-		});
+		// this.registerView(DRAFT_VIEW_TYPE, (leaf) => {
+		// 	this.draftView = new DraftView(leaf);
+		// 	return this.draftView;
+		// });
 
-		this.addCommand({
-			id: 'open-react-view',
-			name: 'Open React View',
-			callback: () => this.activateView(),
-		});
+		// this.app.workspace.onLayoutReady(async () => {
+		// 	await this.activateView();
+		// });
+
+		// this.addCommand({
+		// 	id: 'open-react-view',
+		// 	name: 'Open React View',
+		// 	callback: () => this.activateView(),
+		// });
 
 		this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
 			if (!this.app.workspace.layoutReady) return;
@@ -38,9 +51,21 @@ export default class LinkTypology extends Plugin {
 			this.isWaitingForTextCopy = false;
 			console.log('Перехвачен текст:', currentText);
 
-			if (this.draftView) {
+			// Получаем активное представление (view)
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+
+			if (activeView) {
+				// Получаем объект редактора
+				const editor = activeView.editor;
+
+				// Вставляем текст в позицию курсора
+				editor.setValue(currentText);
+			}
+
+
+			//if (this.draftView) {
 				// 1. Заменить весь текст
-				this.draftView.setEditorText(currentText);
+				//this.draftView.setEditorText(currentText);
 
 				// 2. Вставить текст в текущую позицию курсора
 				// this.draftView.insertText(currentText);
@@ -51,7 +76,7 @@ export default class LinkTypology extends Plugin {
 
 				// 4. Фокусируемся на редакторе
 				//this.draftView.focus();
-			}
+			//}
 
 
 		});
