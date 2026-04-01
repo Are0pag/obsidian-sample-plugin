@@ -1,5 +1,5 @@
 import {setHoverRange} from "./hover";
-import {EditorView, ViewPlugin} from "@codemirror/view";
+import {EditorView, ViewPlugin, ViewUpdate} from "@codemirror/view";
 import {ScanMode, TextScanner} from "./scanner";
 
 // Замыкание (Closure) — это способность функции «помнить» переменные из того места,
@@ -7,6 +7,27 @@ import {ScanMode, TextScanner} from "./scanner";
 export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 	ViewPlugin.fromClass(class {
 		constructor(readonly view: EditorView) {}
+		currentRange: { from: number, to: number } | null = null;
+		currentPos: number | null = null;
+		//lastRange: {from: number, to: number} | null = null;
+		//accumulatedText: string = "";
+		lastSelectionAnchor: number | null = null;
+
+		// для ручного указания границ части текста
+		update(update: ViewUpdate) {
+			// 1. Проверяем, изменилось ли выделение
+			if (update.selectionSet) {
+				// 2. Ищем транзакцию, вызванную именно мышью (pointer)
+				const isMouseClick = update.transactions.some(tr =>
+					tr.isUserEvent("select.pointer") || tr.isUserEvent("input.mouse")
+				);
+
+				if (isMouseClick) {
+					// Только если кликнули мышкой, обновляем наш кеш
+					this.lastSelectionAnchor = update.state.selection.main.anchor;
+				}
+			}
+		}
 	}, {
 		eventHandlers: {
 			mousemove(event: MouseEvent, view: EditorView) {
@@ -20,7 +41,13 @@ export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 				const range = scanner.getRange(view.state, pos, getMode());
 
 				// Обновляем состояние
-				view.dispatch({ effects: setHoverRange.of(range) });
+				view.dispatch({
+					effects: setHoverRange.of(range),
+					selection: range ? { anchor: range.from } : undefined
+				});
+				this.currentPos = pos;
+				this.currentRange = range;
+				//this.lastSelectionAnchor = range ? range.from : null;
 			},
 
 			mouseleave(event: MouseEvent, view: EditorView) {
@@ -31,18 +58,32 @@ export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 			mousedown(event: MouseEvent, view: EditorView) {
 				// Пример реализации удаления: клик с зажатым Ctrl/Cmd
 				if (event.ctrlKey || event.metaKey) {
-					const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+					const pos = this.currentPos;
 					if (pos == null) return;
 
-					const range = scanner.getRange(view.state, pos, getMode());
-					if (range) {
+					if (this.currentRange) {
 						event.preventDefault();
 
 						// Удаляем текст в найденном диапазоне
 						view.dispatch({
-							changes: { from: range.from, to: range.to, insert: "" }
+							changes: { from: this.currentRange.from, to: this.currentRange.to, insert: "" }
 						});
 					}
+				}
+
+				if (event.altKey && this.currentPos && this.currentRange) {
+					// Текущая позиция курсора в тексте (индекс символа)
+					const cursorField = view.state.selection.main.anchor;
+					const firstPart = {
+						from: this.currentRange.from,
+						to: cursorField
+					};
+					const lastPart = {
+						from: cursorField,
+						to: this.currentRange.to
+					};
+
+
 				}
 			}
 		}

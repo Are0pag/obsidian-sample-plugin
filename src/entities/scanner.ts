@@ -8,7 +8,6 @@ export enum ScanMode {
 }
 
 export class TextScanner {
-
 	// Метод для получения диапазона
 	getRange(state: EditorState, pos: number, mode: ScanMode) {
 		if (mode === ScanMode.Word) {

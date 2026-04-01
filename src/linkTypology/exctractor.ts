@@ -35,7 +35,6 @@ export class LinkExtractor {
 		let startLine = h6.position.start.line;
 		let endLine = lines.length; // По умолчанию до конца файла
 
-		// Ищем строку с маркером ~~headingEnd~~ после заголовка
 		for (let i = startLine + 1; i < lines.length; i++) {
 			const line = lines[i];
 			if (line === undefined) continue;

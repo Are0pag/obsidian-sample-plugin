@@ -3,7 +3,7 @@ export interface HeadingNamingConvention {
 	Properties: "Properties",
 	Hierarchical: "Hierarchical relations",
 	Part: "Part-whole relations",
-	End: '~~headingEnd~~',
+	End: '~~h~~',
 }
 
 export  interface KeyWordsNamingConvention {
