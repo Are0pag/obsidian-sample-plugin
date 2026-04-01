@@ -27,6 +27,7 @@ export class TextScanner {
 			const matchesBefore = Array.from(textBefore.matchAll(stopChars));
 			if (matchesBefore.length > 0) {
 				const last = matchesBefore[matchesBefore.length - 1];
+				if (last === undefined) return null;
 				start = last.index! + last[0].length;
 			}
 
