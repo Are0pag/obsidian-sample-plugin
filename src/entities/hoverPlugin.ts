@@ -36,7 +36,6 @@ export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 
 					const range = scanner.getRange(view.state, pos, getMode());
 					if (range) {
-						// Предотвращаем стандартное выделение кликом
 						event.preventDefault();
 
 						// Удаляем текст в найденном диапазоне

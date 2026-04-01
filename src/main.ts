@@ -50,9 +50,11 @@ export default class LinkTypology extends Plugin {
 			if (evt.button === 3) {
 				evt.preventDefault();
 				this.currentMode = shiftEnumValue(ScanMode, this.currentMode, -1);
+				console.log(ScanMode[this.currentMode]);
 			} else if (evt.button === 4) {
 				evt.preventDefault();
 				this.currentMode = shiftEnumValue(ScanMode, this.currentMode, 1);
+				console.log(ScanMode[this.currentMode]);
 			}
 		});
 
