@@ -2,11 +2,21 @@ import {setHoverRange} from "./hover";
 import {EditorView, ViewPlugin, ViewUpdate} from "@codemirror/view";
 import {ScanMode, TextScanner} from "./scanner";
 
+type Range = {
+	from: number;
+	to: number;
+}
+
 // Замыкание (Closure) — это способность функции «помнить» переменные из того места,
 // 	где она была создана, даже после того, как внешняя функция завершила работу.
-export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
+export const hoverPlugin = (
+	scanner: TextScanner,
+	getMode: () => ScanMode,
+	textReadinessCallback: (parts: string[]) => void
+) =>
 	ViewPlugin.fromClass(class {
 		constructor(readonly view: EditorView) {}
+
 		currentRange: { from: number, to: number } | null = null;
 		currentPos: number | null = null;
 		//lastRange: {from: number, to: number} | null = null;
@@ -78,19 +88,15 @@ export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 					}
 
 					const range = scanner.getRange(view.state, pos, getMode());
+					if (range === null) return;
 					view.dispatch({
 						effects: setHoverRange.of(range),
 						selection: range ? { anchor: range.from } : undefined
 					});
 
-					const firstPart = {
-						from: range?.from,
-						to: pos
-					};
-					const lastPart = {
-						from: pos,
-						to: range?.to
-					};
+					const firstPart = view.state.sliceDoc(range.from, pos);
+					const lastPart = view.state.sliceDoc(pos, range.to);
+					textReadinessCallback([firstPart, lastPart]);
 				}
 			}
 		}

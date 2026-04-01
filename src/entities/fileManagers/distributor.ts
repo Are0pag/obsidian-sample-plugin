@@ -1,0 +1,6 @@
+
+// Распределитель
+export class Distributor {
+
+
+}
