@@ -7,6 +7,7 @@ import {ScanMode, TextScanner} from "./entities/scanner";
 import {hoverField} from "./entities/hover";
 import {hoverPlugin} from "./entities/hoverPlugin";
 import {shiftEnumValue} from "./utils/ShiftEnumValue";
+import {TemplateManager} from "./linkTypology/templateInstaller";
 
 
 export default class LinkTypology extends Plugin {
@@ -33,9 +34,10 @@ export default class LinkTypology extends Plugin {
 		// 	return this.draftView;
 		// });
 
-		// this.app.workspace.onLayoutReady(async () => {
-		// 	await this.activateView();
-		// });
+		this.app.workspace.onLayoutReady(async () => {
+			//await this.activateView();
+			await new TemplateManager(this.app).setupTemplate();
+		});
 
 		// this.addCommand({
 		// 	id: 'open-react-view',

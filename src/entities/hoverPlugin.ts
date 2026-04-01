@@ -40,10 +40,9 @@ export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 
 				const range = scanner.getRange(view.state, pos, getMode());
 
-				// Обновляем состояние
 				view.dispatch({
 					effects: setHoverRange.of(range),
-					selection: range ? { anchor: range.from } : undefined
+					//selection: range ? { anchor: range.from } : undefined
 				});
 				this.currentPos = pos;
 				this.currentRange = range;
@@ -71,19 +70,27 @@ export const hoverPlugin = (scanner: TextScanner, getMode: () => ScanMode) =>
 					}
 				}
 
-				if (event.altKey && this.currentPos && this.currentRange) {
-					// Текущая позиция курсора в тексте (индекс символа)
-					const cursorField = view.state.selection.main.anchor;
+				if (event.altKey) {
+					const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+					if (pos == null) {
+						view.dispatch({ effects: setHoverRange.of(null) });
+						return;
+					}
+
+					const range = scanner.getRange(view.state, pos, getMode());
+					view.dispatch({
+						effects: setHoverRange.of(range),
+						selection: range ? { anchor: range.from } : undefined
+					});
+
 					const firstPart = {
-						from: this.currentRange.from,
-						to: cursorField
+						from: range?.from,
+						to: pos
 					};
 					const lastPart = {
-						from: cursorField,
-						to: this.currentRange.to
+						from: pos,
+						to: range?.to
 					};
-
-
 				}
 			}
 		}
