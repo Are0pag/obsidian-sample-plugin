@@ -8,10 +8,12 @@ import {hoverField} from "./entities/hover";
 import {hoverPlugin} from "./entities/hoverPlugin";
 import {shiftEnumValue} from "./utils/ShiftEnumValue";
 import {TemplateManager} from "./linkTypology/templateInstaller";
+import {MermaidExtentions} from "./entities/formatting/mermaidExtentions";
 
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
+	private mermaidExt: MermaidExtentions;
 	//private draftView: DraftView | null = null;
 	private isWaitingForTextCopy : boolean = false;
 	scanner: TextScanner;
@@ -21,12 +23,12 @@ export default class LinkTypology extends Plugin {
 		console.clear();
 		await this.loadSettings();
 		this.scanner = new TextScanner();
+		this.mermaidExt = new MermaidExtentions(this.app);
 
 		// Регистрируем расширения CodeMirror 6
 		this.registerEditorExtension([
 			hoverField,
-			// Передаем инстанс сканера и текущий режим в плагин визуализации
-			hoverPlugin(this.scanner, () => this.currentMode)
+			//hoverPlugin(this.scanner, () => this.currentMode)
 		]);
 
 		// this.registerView(DRAFT_VIEW_TYPE, (leaf) => {
@@ -60,6 +62,16 @@ export default class LinkTypology extends Plugin {
 			}
 		});
 
+		this.registerEvent(
+			this.app.workspace.on('layout-change', () => {
+				this.mermaidExt.processMermaidDiagrams();
+			})
+		)
+		// Наблюдаем за новыми диаграммами
+		const observer = new MutationObserver(() => {
+			this.mermaidExt.processMermaidDiagrams();
+		});
+		observer.observe(document.body, { childList: true, subtree: true });
 
 	}
 
@@ -107,6 +119,7 @@ export default class LinkTypology extends Plugin {
 
 		await workspace.revealLeaf(leaf);
 	}
+
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
