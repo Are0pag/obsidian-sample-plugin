@@ -1,12 +1,27 @@
-/*
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
 .cm-hover-highlight {
 	background-color: rgba(255, 255, 0, 0.3) !important;
 	border-bottom: 2px solid orange;
 }
+
+/* Скрываем коллаут во всем редакторе (Live Preview) */
+.markdown-source-view.mod-cm6 .cm-content > div:has(.callout[data-callout="hidden"]) {
+	height: 0px !important;
+	min-height: 0px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	overflow: hidden !important;
+	opacity: 0 !important;
+	pointer-events: none !important; /* Чтобы нельзя было случайно кликнуть */
+}
+
+/* Опционально: показываем блок ТОЛЬКО когда курсор физически стоит на этой строке */
+.markdown-source-view.mod-cm6 .cm-content > div:has(.callout[data-callout="hidden"]):has(.cm-cursor) {
+	height: auto !important;
+	opacity: 1 !important;
+	pointer-events: auto !important;
+}
+
+.markdown-rendered .callout[data-callout="hidden"] { display: none; }
+
+
