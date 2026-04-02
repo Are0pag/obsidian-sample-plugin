@@ -9,11 +9,13 @@ import {hoverPlugin} from "./entities/hoverPlugin";
 import {shiftEnumValue} from "./utils/ShiftEnumValue";
 import {TemplateManager} from "./linkTypology/templateInstaller";
 import {MermaidExtentions} from "./entities/formatting/mermaidExtentions";
+import {MermaidSyncer} from "./entities/formatting/MermaidSyncer";
 
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
 	private mermaidExt: MermaidExtentions;
+	private syncer: MermaidSyncer;
 	//private draftView: DraftView | null = null;
 	private isWaitingForTextCopy : boolean = false;
 	scanner: TextScanner;
@@ -24,6 +26,7 @@ export default class LinkTypology extends Plugin {
 		await this.loadSettings();
 		this.scanner = new TextScanner();
 		this.mermaidExt = new MermaidExtentions(this.app);
+		this.syncer = new MermaidSyncer(this.app);
 
 		// Регистрируем расширения CodeMirror 6
 		this.registerEditorExtension([
@@ -72,6 +75,45 @@ export default class LinkTypology extends Plugin {
 			this.mermaidExt.processMermaidDiagrams();
 		});
 		observer.observe(document.body, { childList: true, subtree: true });
+
+		// Используем 'changed', так как Obsidian вызывает его после
+		// автоматического обновления внутренних ссылок в файле.
+		this.registerEvent(
+			this.app.metadataCache.on('changed', (file) => {
+				this.syncer.syncMermaidWithLinks(file);
+			})
+		);
+
+		// для скрытого содержания: Слушаем событие изменения активного представления (включая переходы по ссылкам)
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) return;
+
+				const editor = view.editor;
+				let currLine = editor.getCursor().line;
+
+				// Идем вверх от курсора, пока строки начинаются с '>' (цитата/коллаут)
+				while (currLine >= 0) {
+					const lineText = editor.getLine(currLine).trim();
+
+					// Если нашли начало нашего скрытого блока
+					if (lineText.startsWith('> [!hidden]')) {
+						// Выбрасываем курсор в начало файла
+						editor.setCursor({ line: 0, ch: 0 });
+						// Опционально: убираем фокус с редактора, чтобы не развернуло блок
+						(editor as any).blur();
+						break;
+					}
+
+					// Если строка не начинается с '>', значит мы вышли за пределы коллаута вверх
+					if (!lineText.startsWith('>')) break;
+
+					currLine--;
+				}
+			})
+		);
+;
 
 	}
 
