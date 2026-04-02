@@ -1,3 +1,6 @@
+
+export const DRAFT_FILE_NAME = "draft" as const;
+
 export interface HeadingNamingConvention {
 	Definition: "Definitions",
 	Properties: "Properties",

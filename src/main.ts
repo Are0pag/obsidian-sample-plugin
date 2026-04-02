@@ -10,16 +10,20 @@ import {shiftEnumValue} from "./utils/ShiftEnumValue";
 import {TemplateManager} from "./linkTypology/templateInstaller";
 import {MermaidExtentions} from "./entities/formatting/mermaidExtentions";
 import {MermaidSyncer} from "./entities/formatting/MermaidSyncer";
+import {Distributor} from "./entities/fileManagers/distributor";
+import {DRAFT_FILE_NAME} from "./core/NameConventions";
 
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
 	private mermaidExt: MermaidExtentions;
 	private syncer: MermaidSyncer;
+	private distributor: Distributor;
 	//private draftView: DraftView | null = null;
 	private isWaitingForTextCopy : boolean = false;
 	scanner: TextScanner;
 	currentMode: ScanMode = ScanMode.Sentence;
+	isDraftActive: boolean = false;
 
 	async onload() {
 		console.clear();
@@ -27,12 +31,28 @@ export default class LinkTypology extends Plugin {
 		this.scanner = new TextScanner();
 		this.mermaidExt = new MermaidExtentions(this.app);
 		this.syncer = new MermaidSyncer(this.app);
+		this.distributor = new Distributor();
 
 		// Регистрируем расширения CodeMirror 6
 		this.registerEditorExtension([
 			hoverField,
-			//hoverPlugin(this.scanner, () => this.currentMode)
+			hoverPlugin(
+				this.scanner,
+				() => this.currentMode,
+				this.distributor.insert,
+				() => this.isDraftActive)
 		]);
+
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (leaf) => {
+				const activeFile = this.app.workspace.getActiveFile();
+				// Кешируем результат проверки
+				this.isDraftActive = activeFile?.basename === DRAFT_FILE_NAME;
+			})
+		);
+
+		// Инициализируем при старте
+		this.isDraftActive = this.app.workspace.getActiveFile()?.basename === DRAFT_FILE_NAME;
 
 		// this.registerView(DRAFT_VIEW_TYPE, (leaf) => {
 		// 	this.draftView = new DraftView(leaf);

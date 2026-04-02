@@ -1,7 +1,8 @@
 
 // Распределитель
 export class Distributor {
-	insert(parts: string[], as: any) {
+	// Получаем быстро нарезанные куски чистого текста
+	insert(parts: string[]) {
 
 	}
 
