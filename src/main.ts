@@ -13,6 +13,7 @@ import {MermaidSyncer} from "./entities/formatting/MermaidSyncer";
 import {Distributor} from "./entities/fileManagers/distributor";
 import {DRAFT_FILE_NAME} from "./core/NameConventions";
 import {Searcher} from "./entities/fileManagers/ searcher";
+import {LinksMapProvider} from "./entities/linksManagers/linksMapProvider";
 
 
 export default class LinkTypology extends Plugin {
@@ -34,7 +35,7 @@ export default class LinkTypology extends Plugin {
 		this.mermaidExt = new MermaidExtentions(this.app);
 		this.syncer = new MermaidSyncer(this.app);
 		this.searcher = new Searcher(this.app);
-		this.distributor = new Distributor(this.searcher);
+		this.distributor = new Distributor(this.app, this.searcher, new LinksMapProvider(this.app));
 		// Регистрируем расширения CodeMirror 6
 		this.registerEditorExtension([
 			hoverField,
@@ -62,7 +63,10 @@ export default class LinkTypology extends Plugin {
 
 		this.app.workspace.onLayoutReady(async () => {
 			//await this.activateView();
-			await new TemplateManager(this.app).setupTemplate();
+			//await new TemplateManager(this.app).setupTemplate();
+			if (!await this.app.vault.adapter.exists('Content')) {
+				await this.app.vault.createFolder(`Content`);
+			}
 		});
 
 		// this.addCommand({

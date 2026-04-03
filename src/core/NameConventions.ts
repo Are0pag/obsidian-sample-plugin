@@ -1,5 +1,6 @@
 
 export const DRAFT_FILE_NAME = "draft" as const;
+export const CONTENT_FOLDER_NAME = "Content";
 
 export interface HeadingNamingConvention {
 	Definition: "Definitions",
