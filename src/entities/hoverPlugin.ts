@@ -12,7 +12,7 @@ type Range = {
 export const hoverPlugin = (
 	scanner: TextScanner,
 	getMode: () => ScanMode,
-	textReadinessCallback: (parts: string[]) => void,
+	textReadinessCallback: (parts: string[]) => void, //(намеренно не ждём) Promise<void>,
 	isEnabled: () => boolean
 ) =>
 	ViewPlugin.fromClass(class {

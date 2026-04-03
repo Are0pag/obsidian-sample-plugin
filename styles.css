@@ -4,6 +4,11 @@
 	border-bottom: 2px solid orange;
 }
 
+.mermaid {
+	display: flex;
+	justify-content: center;
+}
+
 /* Скрываем коллаут во всем редакторе (Live Preview) */
 .markdown-source-view.mod-cm6 .cm-content > div:has(.callout[data-callout="hidden"]) {
 	height: 0px !important;

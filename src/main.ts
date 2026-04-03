@@ -12,6 +12,7 @@ import {MermaidExtentions} from "./entities/formatting/mermaidExtentions";
 import {MermaidSyncer} from "./entities/formatting/MermaidSyncer";
 import {Distributor} from "./entities/fileManagers/distributor";
 import {DRAFT_FILE_NAME} from "./core/NameConventions";
+import {Searcher} from "./entities/fileManagers/ searcher";
 
 
 export default class LinkTypology extends Plugin {
@@ -19,6 +20,7 @@ export default class LinkTypology extends Plugin {
 	private mermaidExt: MermaidExtentions;
 	private syncer: MermaidSyncer;
 	private distributor: Distributor;
+	private searcher: Searcher;
 	//private draftView: DraftView | null = null;
 	private isWaitingForTextCopy : boolean = false;
 	scanner: TextScanner;
@@ -31,8 +33,8 @@ export default class LinkTypology extends Plugin {
 		this.scanner = new TextScanner();
 		this.mermaidExt = new MermaidExtentions(this.app);
 		this.syncer = new MermaidSyncer(this.app);
-		this.distributor = new Distributor();
-
+		this.searcher = new Searcher(this.app);
+		this.distributor = new Distributor(this.searcher);
 		// Регистрируем расширения CodeMirror 6
 		this.registerEditorExtension([
 			hoverField,
@@ -46,7 +48,6 @@ export default class LinkTypology extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (leaf) => {
 				const activeFile = this.app.workspace.getActiveFile();
-				// Кешируем результат проверки
 				this.isDraftActive = activeFile?.basename === DRAFT_FILE_NAME;
 			})
 		);
