@@ -4,6 +4,8 @@ import {Searcher} from "./ searcher";
 import {App, TFile} from "obsidian";
 import {CONTENT_FOLDER_NAME} from "../../core/NameConventions";
 import {LinksMapProvider} from "../linksManagers/linksMapProvider";
+import {FromDraftModal} from "../../ui/modals/fromDraftModal";
+import {FileSelectionModal} from "../../ui/modals/fileSelectionModal";
 
 export class Distributor {
 	private readonly app: App;
@@ -25,8 +27,8 @@ export class Distributor {
 			// Откуда?
 			// 1 - от корня (привет граф)
 			// 2 от текущей (привет локальный граф)
-			const roots = await this.linksMap.getItemsWithoutBacklinks();
-
+			const roots = this.linksMap.getItemsWithoutBacklinks();
+			//roots[0].path
 
 			const filePath = `${CONTENT_FOLDER_NAME}/${parts[0]}.md`;
 			let newFile: TFile;
@@ -39,8 +41,9 @@ export class Distributor {
 				newFile = await this.app.vault.create(filePath, "- ");
 			}
 
+			new FileSelectionModal(this.app, roots)
+				.open();
 
-			debugger
 		} catch (e) {
 			console.error("Ошибка при загрузке данных для ховера:", e);
 		}
