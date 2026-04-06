@@ -16,6 +16,7 @@ import {StatusBarCodeScanOptions} from "./ui/statusBarItems/statusBarCodeScanOpt
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
+	statusBarControl: StatusBarCodeScanOptions;
 	private statusBar: StatusBarCodeScanOptions;
 	private mermaidExt: MermaidExtentions;
 	private syncer: MermaidSyncer;
@@ -32,6 +33,7 @@ export default class LinkTypology extends Plugin {
 		this.install();
 		this.setupHover();
 		this.setupIsDraftActive();
+		this.setupSettings();
 
 		this.app.workspace.onLayoutReady(async () => {
 			if (!await this.app.vault.adapter.exists('Content')) {
@@ -48,7 +50,21 @@ export default class LinkTypology extends Plugin {
 		this.syncer = new MermaidSyncer(this.app);
 		this.searcher = new Searcher(this.app);
 		this.distributor = new Distributor(this.app, this.searcher, new LinksMapProvider(this.app));
-		this.statusBar = new StatusBarCodeScanOptions(this.addStatusBarItem());
+	}
+
+	private setupSettings() {
+		// 1. Создаем элемент в статус-баре
+		const statusBarItemEl = this.addStatusBarItem();
+
+		// 2. Инициализируем наш контроллер
+		this.statusBarControl = new StatusBarCodeScanOptions(
+			statusBarItemEl,
+			this.settings.codeScanOptions,
+			async (newValue) => {
+				this.settings.codeScanOptions = newValue;
+				await this.saveSettings();
+			}
+		);
 	}
 
 	private setupIsDraftActive() {
