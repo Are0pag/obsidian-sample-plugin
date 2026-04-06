@@ -1,7 +1,10 @@
 
 export enum CodeScanOptions {
-	C = "C",
-	Cpp = "C++",
-	Cs = "C#",
-	SQL = "SQL",
+	C = "c",
+	Cpp = "cpp",
+	Cs = "csharp",
+	SQL = "sql",
+	Bash = "bash",
+	Python = "python",
+	TS = "typescript"
 }

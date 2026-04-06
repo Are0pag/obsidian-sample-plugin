@@ -12,6 +12,7 @@ import {DRAFT_FILE_NAME} from "./core/NameConventions";
 import {Searcher} from "./entities/fileManagers/searcher";
 import {LinksMapProvider} from "./entities/linksManagers/linksMapProvider";
 import {StatusBarCodeScanOptions} from "./ui/statusBarItems/statusBarCodeScanOptions";
+import {DraftManager} from "./app/DraftManager";
 
 
 export default class LinkTypology extends Plugin {
@@ -23,6 +24,7 @@ export default class LinkTypology extends Plugin {
 	private distributor: Distributor;
 	private searcher: Searcher;
 	private isWaitingForTextCopy : boolean = false;
+	draftManager: DraftManager;
 	scanner: TextScanner;
 	currentMode: ScanMode = ScanMode.Sentence;
 	isDraftActive: boolean = false;
@@ -44,12 +46,16 @@ export default class LinkTypology extends Plugin {
 
 	}
 
+
 	private install() {
+
 		this.scanner = new TextScanner();
 		this.mermaidExt = new MermaidExtentions(this.app);
 		this.syncer = new MermaidSyncer(this.app);
 		this.searcher = new Searcher(this.app);
 		this.distributor = new Distributor(this.app, this.searcher, new LinksMapProvider(this.app));
+		this.draftManager = new DraftManager(this.app, this.settings);
+		this.draftManager.setup();
 	}
 
 	private setupSettings() {
@@ -156,7 +162,7 @@ export default class LinkTypology extends Plugin {
 	private async catchBuffer() {
 		if (!this.app.workspace.layoutReady) return;
 		if (this.isWaitingForTextCopy) return;
-		console.log("Wait text import")
+		console.log("Wait text import");
 		this.isWaitingForTextCopy = true;
 		let currentText = await waitForCopy();
 		this.isWaitingForTextCopy = false;
@@ -175,6 +181,7 @@ export default class LinkTypology extends Plugin {
 	}
 
 	onunload() {
+		this.draftManager.destroy();
 	}
 
 	async loadSettings() {
