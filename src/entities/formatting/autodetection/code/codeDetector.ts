@@ -1,8 +1,8 @@
 // npm install prismjs
 // npm install --save-dev @types/prismjs
-
 import Prism from 'prismjs';
-
+// Хак для того, чтобы компоненты Prism увидели библиотеку
+(window as any).Prism = Prism;
 import 'prismjs/components/prism-c';
 import 'prismjs/components/prism-cpp';
 import 'prismjs/components/prism-csharp';
@@ -12,34 +12,23 @@ import 'prismjs/components/prism-shell-session';
 import {CodeScanOptions} from "../../../../core/codeScanOptions";
 
 export function detectCodeBlocks(input: string, lang: CodeScanOptions): string {
-	const grammar = Prism.languages[lang];
-	if (!grammar) {
-		debugger; return input;
-	}
+	// Регулярка: ищет текст, который начинается после ":"
+	// и заканчивается на ";" (включая переносы строк)
+	// [^:]*? — берет ближайшее совпадение, чтобы не захватить лишнего
+	const codeRegex = /:\s*([^:]+?;)/gs;
 
-	const tokens = Prism.tokenize(input, grammar);
-	let finalMarkdown = "";
-	let codeBuffer = "";
+	return input.replace(codeRegex, (match, codeGroup) => {
+		const cleanCode = codeGroup.trim();
 
-	for (const token of tokens) {
-		if (typeof token !== 'string') {
-			// Prism распознал это как элемент кода (ключевое слово, оператор и т.д.)
-			codeBuffer += (typeof token.content === 'string') ? token.content : token.content.toString();
-		} else {
-			// Это обычный текст. Если в буфере накопился код — сбрасываем его в блок.
-			if (codeBuffer.trim().length > 0) {
-				finalMarkdown += `\n\`\`\`${lang}\n${codeBuffer.trim()}\n\`\`\`\n`;
-				codeBuffer = "";
-			}
-			finalMarkdown += token;
+		// Простая проверка: если внутри "кода" меньше 5 символов
+		// или нет ни одного спецсимвола/цифры — скорее всего это просто текст
+		if (cleanCode.length < 5 || !/[0-9;()',]/.test(cleanCode)) {
+			return `: ${cleanCode}`;
 		}
-	}
 
-	// Если код был в самом конце текста
-	if (codeBuffer.trim().length > 0) {
-		finalMarkdown += `\n\`\`\`${lang}\n${codeBuffer.trim()}\n\`\`\`\n`;
-	}
-
-	return finalMarkdown.trim();
+		// Возвращаем двоеточие, а код упаковываем в блок Obsidian
+		return `:\n\`\`\`${lang}\n${cleanCode}\n\`\`\`\n`;
+	});
 }
+
 
