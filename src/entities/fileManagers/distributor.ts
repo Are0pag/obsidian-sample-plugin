@@ -1,10 +1,9 @@
 
 // Распределитель
-import {Searcher} from "./ searcher";
+import {Searcher} from "./searcher";
 import {App, TFile} from "obsidian";
 import {CONTENT_FOLDER_NAME} from "../../core/NameConventions";
 import {LinksMapProvider} from "../linksManagers/linksMapProvider";
-import {FromDraftModal} from "../../ui/modals/fromDraftModal";
 import {FileSelectionModal} from "../../ui/modals/fileSelectionModal";
 
 export class Distributor {

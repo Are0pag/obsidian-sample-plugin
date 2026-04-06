@@ -1,28 +1,26 @@
 import {App, Editor, MarkdownView, Modal, Notice, Plugin, View, WorkspaceLeaf} from 'obsidian';
 import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
-import { createContext } from 'react';
-import {DraftView, DRAFT_VIEW_TYPE} from "./DraftView";
 import {waitForCopy} from "./ICS/clipboardManager";
-import {ScanMode, TextScanner} from "./entities/formatting/scanner";
+import {ScanMode, TextScanner} from "./entities/formatting/scanning/scanner";
 import {hoverField} from "./entities/formatting/hover/hover";
 import {hoverPlugin} from "./entities/formatting/hover/hoverPlugin";
 import {shiftEnumValue} from "./utils/ShiftEnumValue";
-import {TemplateManager} from "./linkTypology/templateInstaller";
 import {MermaidExtentions} from "./entities/formatting/mermaid/mermaidExtentions";
 import {MermaidSyncer} from "./entities/formatting/mermaid/MermaidSyncer";
 import {Distributor} from "./entities/fileManagers/distributor";
 import {DRAFT_FILE_NAME} from "./core/NameConventions";
-import {Searcher} from "./entities/fileManagers/ searcher";
+import {Searcher} from "./entities/fileManagers/searcher";
 import {LinksMapProvider} from "./entities/linksManagers/linksMapProvider";
+import {StatusBarCodeScanOptions} from "./ui/statusBarItems/statusBarCodeScanOptions";
 
 
 export default class LinkTypology extends Plugin {
 	settings: MyPluginSettings;
+	private statusBar: StatusBarCodeScanOptions;
 	private mermaidExt: MermaidExtentions;
 	private syncer: MermaidSyncer;
 	private distributor: Distributor;
 	private searcher: Searcher;
-	//private draftView: DraftView | null = null;
 	private isWaitingForTextCopy : boolean = false;
 	scanner: TextScanner;
 	currentMode: ScanMode = ScanMode.Sentence;
@@ -31,21 +29,29 @@ export default class LinkTypology extends Plugin {
 	async onload() {
 		console.clear();
 		await this.loadSettings();
+		this.install();
+		this.setupHover();
+		this.setupIsDraftActive();
+
+		this.app.workspace.onLayoutReady(async () => {
+			if (!await this.app.vault.adapter.exists('Content')) {
+				await this.app.vault.createFolder(`Content`);
+			}
+		});
+		//this.setupMermaidExtensions();
+
+	}
+
+	private install() {
 		this.scanner = new TextScanner();
 		this.mermaidExt = new MermaidExtentions(this.app);
 		this.syncer = new MermaidSyncer(this.app);
 		this.searcher = new Searcher(this.app);
 		this.distributor = new Distributor(this.app, this.searcher, new LinksMapProvider(this.app));
-		// Регистрируем расширения CodeMirror 6
-		this.registerEditorExtension([
-			hoverField,
-			hoverPlugin(
-				this.scanner,
-				() => this.currentMode,
-				this.distributor.insert,
-				() => this.isDraftActive)
-		]);
+		this.statusBar = new StatusBarCodeScanOptions(this.addStatusBarItem());
+	}
 
+	private setupIsDraftActive() {
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', (leaf) => {
 				const activeFile = this.app.workspace.getActiveFile();
@@ -55,29 +61,18 @@ export default class LinkTypology extends Plugin {
 
 		// Инициализируем при старте
 		this.isDraftActive = this.app.workspace.getActiveFile()?.basename === DRAFT_FILE_NAME;
+	}
 
-		// this.registerView(DRAFT_VIEW_TYPE, (leaf) => {
-		// 	this.draftView = new DraftView(leaf);
-		// 	return this.draftView;
-		// });
-
-		this.app.workspace.onLayoutReady(async () => {
-			//await this.activateView();
-			//await new TemplateManager(this.app).setupTemplate();
-			if (!await this.app.vault.adapter.exists('Content')) {
-				await this.app.vault.createFolder(`Content`);
-			}
-		});
-
-		// this.addCommand({
-		// 	id: 'open-react-view',
-		// 	name: 'Open React View',
-		// 	callback: () => this.activateView(),
-		// });
-
-		this.registerDomEvent(document, 'click', async (evt: MouseEvent) => {
-			//await this.catchBuffer();
-		});
+	private setupHover() {
+		// Регистрируем расширения CodeMirror 6
+		this.registerEditorExtension([
+			hoverField,
+			hoverPlugin(
+				this.scanner,
+				() => this.currentMode,
+				this.distributor.insert,
+				() => this.isDraftActive)
+		]);
 		this.registerDomEvent(document, 'pointerdown', (evt: PointerEvent) => {
 			if (evt.button === 3) {
 				evt.preventDefault();
@@ -89,7 +84,9 @@ export default class LinkTypology extends Plugin {
 				console.log(ScanMode[this.currentMode]);
 			}
 		});
+	}
 
+	private setupMermaidExtensions() {
 		this.registerEvent(
 			this.app.workspace.on('layout-change', () => {
 				this.mermaidExt.processMermaidDiagrams();
@@ -99,7 +96,7 @@ export default class LinkTypology extends Plugin {
 		const observer = new MutationObserver(() => {
 			this.mermaidExt.processMermaidDiagrams();
 		});
-		observer.observe(document.body, { childList: true, subtree: true });
+		observer.observe(document.body, {childList: true, subtree: true});
 
 		// Используем 'changed', так как Obsidian вызывает его после
 		// автоматического обновления внутренних ссылок в файле.
@@ -125,7 +122,7 @@ export default class LinkTypology extends Plugin {
 					// Если нашли начало нашего скрытого блока
 					if (lineText.startsWith('> [!hidden]')) {
 						// Выбрасываем курсор в начало файла
-						editor.setCursor({ line: 0, ch: 0 });
+						editor.setCursor({line: 0, ch: 0});
 						// Опционально: убираем фокус с редактора, чтобы не развернуло блок
 						(editor as any).blur();
 						break;
@@ -138,8 +135,6 @@ export default class LinkTypology extends Plugin {
 				}
 			})
 		);
-;
-
 	}
 
 	private async catchBuffer() {
@@ -165,28 +160,6 @@ export default class LinkTypology extends Plugin {
 
 	onunload() {
 	}
-
-	async activateView() {
-		const { workspace } = this.app;
-
-		let leaf = workspace.getLeavesOfType(DRAFT_VIEW_TYPE)[0];
-
-		if (!leaf) {
-			leaf = workspace.getRightLeaf(false) ?? undefined;
-			await leaf?.setViewState({
-				type: DRAFT_VIEW_TYPE,
-				active: true,
-			});
-		}
-
-		if (leaf === undefined) {
-			console.error("draft leaf is undefined", leaf);
-			return;
-		}
-
-		await workspace.revealLeaf(leaf);
-	}
-
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
