@@ -2,11 +2,11 @@ import {App, PluginSettingTab, Setting} from "obsidian";
 import LinkTypology from "./main";
 import {CodeScanOptions} from "./core/codeScanOptions";
 
-export interface MyPluginSettings {
+export interface PluginSettings {
 	codeScanOptions: string;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
+export const DEFAULT_SETTINGS: PluginSettings = {
 	codeScanOptions: CodeScanOptions.Cs.toString(),
 }
 

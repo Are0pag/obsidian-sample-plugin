@@ -1,5 +1,5 @@
 import {App, Editor, MarkdownView, Modal, Notice, Plugin, View, WorkspaceLeaf} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import {DEFAULT_SETTINGS, PluginSettings, SampleSettingTab} from "./settings";
 import {waitForCopy} from "./ICS/clipboardManager";
 import {ScanMode, TextScanner} from "./entities/formatting/scanning/scanner";
 import {hoverField} from "./entities/formatting/hover/hover";
@@ -15,7 +15,7 @@ import {StatusBarCodeScanOptions} from "./ui/statusBarItems/statusBarCodeScanOpt
 
 
 export default class LinkTypology extends Plugin {
-	settings: MyPluginSettings;
+	settings: PluginSettings;
 	statusBarControl: StatusBarCodeScanOptions;
 	private statusBar: StatusBarCodeScanOptions;
 	private mermaidExt: MermaidExtentions;
@@ -178,7 +178,7 @@ export default class LinkTypology extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<PluginSettings>);
 	}
 
 	async saveSettings() {
