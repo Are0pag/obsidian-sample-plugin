@@ -21,6 +21,7 @@ export function getRangeAtPos(state: EditorState, pos: number, mode: HighlightMo
 		const matchesBefore = [...textBefore.matchAll(stopChars)];
 		if (matchesBefore.length > 0) {
 			const lastMatch = matchesBefore[matchesBefore.length - 1];
+			if (lastMatch === undefined) return null;
 			start = lastMatch.index! + lastMatch[0].length;
 		}
 

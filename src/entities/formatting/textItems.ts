@@ -10,6 +10,20 @@ export interface CodeBlock {
 	rule: RegExp;
 }
 
+interface TextComponent {
+
+}
+
+interface Sentence extends TextComponent {
+	text: string;
+}
+
+interface Enumeration extends TextComponent {
+	// Colon - двоеточие `:`
+	textBeforeColon: string;
+	values: string[];
+}
+
 // если перед началом строки лишние отступы/символы #, 1...9, точки, ... - удалить
 // (разумеется кроме естественных знаков препинания в тексте)
 

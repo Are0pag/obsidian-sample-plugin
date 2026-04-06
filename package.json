@@ -15,6 +15,7 @@
 	"devDependencies": {
 		"@eslint/js": "9.30.1",
 		"@types/node": "^16.11.6",
+		"@types/prismjs": "^1.26.6",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"esbuild": "0.25.5",
@@ -28,6 +29,7 @@
 	"dependencies": {
 		"clipboardy": "^5.3.1",
 		"obsidian": "latest",
+		"prismjs": "^1.30.0",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
 		"slate": "^0.124.0",

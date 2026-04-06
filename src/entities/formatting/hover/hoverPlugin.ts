@@ -1,6 +1,6 @@
 import {setHoverRange} from "./hover";
 import {EditorView, ViewPlugin, ViewUpdate} from "@codemirror/view";
-import {ScanMode, TextScanner} from "./scanner";
+import {ScanMode, TextScanner} from "../scanner";
 
 type Range = {
 	from: number;
