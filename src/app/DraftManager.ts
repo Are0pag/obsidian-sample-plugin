@@ -31,7 +31,7 @@ export class DraftManager {
 				const currentText = await waitForCopy();
 
 				if (currentText) {
-					await this.appendToDraft(activeView.file, currentText);
+					//await this.appendToDraft(activeView.file, currentText);
 				}
 			} catch (e) {
 				console.error("DraftPlugin Error:", e);

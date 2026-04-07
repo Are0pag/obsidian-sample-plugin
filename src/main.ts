@@ -159,27 +159,6 @@ export default class LinkTypology extends Plugin {
 		);
 	}
 
-	private async catchBuffer() {
-		if (!this.app.workspace.layoutReady) return;
-		if (this.isWaitingForTextCopy) return;
-		console.log("Wait text import");
-		this.isWaitingForTextCopy = true;
-		let currentText = await waitForCopy();
-		this.isWaitingForTextCopy = false;
-		console.log('Перехвачен текст:', currentText);
-
-		// Получаем активное представление (view)
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-
-		if (activeView) {
-			// Получаем объект редактора
-			const editor = activeView.editor;
-
-			// Вставляем текст в позицию курсора
-			editor.setValue(currentText);
-		}
-	}
-
 	onunload() {
 		this.draftManager.destroy();
 	}
