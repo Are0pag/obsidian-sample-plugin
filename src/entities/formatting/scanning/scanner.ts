@@ -29,7 +29,9 @@ export class TextScanner {
 
 				const matchesBefore = Array.from(docText.substring(0, pos).matchAll(boundaryRegex));
 				if (matchesBefore.length > 0) {
-					start = matchesBefore[matchesBefore.length - 1].index! + matchesBefore[matchesBefore.length - 1][0].length;
+					let count = matchesBefore[matchesBefore.length - 1];
+					if (count)
+						start = count.index! + count[0].length;
 				}
 
 				boundaryRegex.lastIndex = pos;
@@ -52,7 +54,9 @@ export class TextScanner {
 				const matchesEvenBefore = Array.from(docText.substring(0, range.from - 1).matchAll(boundaryRegex));
 
 				if (matchesEvenBefore.length > 0) {
-					prevStart = matchesEvenBefore[matchesEvenBefore.length - 1].index! + matchesEvenBefore[matchesEvenBefore.length - 1][0].length;
+					let count = matchesEvenBefore[matchesEvenBefore.length - 1];
+					if (count)
+						prevStart = count.index! + count[0].length;
 				}
 
 				// Объединяем: от начала вводной фразы до конца текущего блока
