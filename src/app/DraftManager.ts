@@ -2,7 +2,6 @@ import { App, TFile, MarkdownView } from 'obsidian';
 import {waitForCopy} from "../ICS/clipboardManager";
 import {detectCodeBlocks} from "../entities/formatting/autodetection/code/codeDetector";
 import {PluginSettings} from "../settings";
-import {CodeScanOptions} from "../core/codeScanOptions";
 
 export class DraftManager {
 	private readonly app: App;
@@ -42,7 +41,7 @@ export class DraftManager {
 
 	private async appendToDraft(file: TFile, text: string) {
 		// Добавляем текст в конец файла с новой строки
-		let formated = detectCodeBlocks(text, this._settings.codeScanOptions as CodeScanOptions);
+		let formated = detectCodeBlocks(text, this._settings);
 		await this.app.vault.process(file, (data) => {
 			return data + `\n${formated}`;
 		});

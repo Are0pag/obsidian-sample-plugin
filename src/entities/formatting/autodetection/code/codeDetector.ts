@@ -10,8 +10,9 @@ import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-shell-session';
 import {CodeScanOptions} from "../../../../core/codeScanOptions";
+import {PluginSettings} from "../../../../settings";
 
-export function detectCodeBlocks(input: string, lang: CodeScanOptions): string {
+export function detectCodeBlocks(input: string, settings: PluginSettings): string {
 	// Регулярка: ищет текст, который начинается после ":"
 	// и заканчивается на ";" (включая переносы строк)
 	// [^:]*? — берет ближайшее совпадение, чтобы не захватить лишнего
@@ -27,7 +28,7 @@ export function detectCodeBlocks(input: string, lang: CodeScanOptions): string {
 		}
 
 		// Возвращаем двоеточие, а код упаковываем в блок Obsidian
-		return `:\n\`\`\`${lang}\n${cleanCode}\n\`\`\`\n`;
+		return `:\n\`\`\`${settings.codeScanOptions as CodeScanOptions}\n${cleanCode}\n\`\`\`\n`;
 	});
 }
 

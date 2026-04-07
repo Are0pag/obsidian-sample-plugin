@@ -18,7 +18,7 @@ export const hoverPlugin = (
 	ViewPlugin.fromClass(class {
 		constructor(readonly view: EditorView) {}
 
-		currentRange: { from: number, to: number } | null = null;
+		public currentRange: { from: number, to: number } | null = null;
 		currentPos: number | null = null;
 		//lastRange: {from: number, to: number} | null = null;
 		lastSelectionAnchor: number | null = null;
@@ -101,6 +101,7 @@ export const hoverPlugin = (
 					const lastPart = view.state.sliceDoc(pos, range.to);
 					textReadinessCallback([firstPart, lastPart]);
 				}
+
 			}
 		}
 	});
