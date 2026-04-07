@@ -1,6 +1,7 @@
 import {setHoverRange} from "./hover";
 import {EditorView, ViewPlugin, ViewUpdate} from "@codemirror/view";
 import {ScanMode, TextScanner} from "../scanning/scanner";
+import {Distributor} from "../../fileManagers/distributor";
 
 type Range = {
 	from: number;
@@ -11,8 +12,9 @@ type Range = {
 // 	где она была создана, даже после того, как внешняя функция завершила работу.
 export const hoverPlugin = (
 	scanner: TextScanner,
+	distributor: Distributor,
 	getMode: () => ScanMode,
-	textReadinessCallback: (parts: string[]) => void, //(намеренно не ждём) Promise<void>,
+	//textReadinessCallback: (parts: string[]) => void, //(намеренно не ждём) Promise<void>,
 	isEnabled: () => boolean
 ) =>
 	ViewPlugin.fromClass(class {
@@ -148,7 +150,8 @@ export const hoverPlugin = (
 
 					const firstPart = view.state.sliceDoc(range.from, pos);
 					const lastPart = view.state.sliceDoc(pos, range.to);
-					textReadinessCallback([firstPart, lastPart]);
+					distributor.insert([firstPart, lastPart]);
+					//textReadinessCallback([firstPart, lastPart]);
 				}
 			},
 		}

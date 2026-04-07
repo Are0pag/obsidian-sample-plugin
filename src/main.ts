@@ -91,8 +91,8 @@ export default class LinkTypology extends Plugin {
 			hoverField,
 			hoverPlugin(
 				this.scanner,
+				this.distributor,
 				() => this.currentMode,
-				this.distributor.insert,
 				() => this.isDraftActive)
 		]);
 		this.registerDomEvent(document, 'pointerdown', (evt: PointerEvent) => {

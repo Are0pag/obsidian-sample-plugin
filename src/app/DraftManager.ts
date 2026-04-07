@@ -13,7 +13,6 @@ export class DraftManager {
 		this._settings = settings;
 	}
 
-	// Основной метод инициализации событий
 	setup() {
 		window.addEventListener('blur', this.onWindowBlur);
 	}
