@@ -18,75 +18,48 @@ export class TextScanner {
 		const docText = state.doc.toString();
 
 		if (mode === ScanMode.Sentence) {
-			// Сначала проверим, не находимся ли мы внутри блока кода
-			const codeBlockRange = this.getCodeBlockRange(docText, pos);
-			if (codeBlockRange) {
-				return codeBlockRange;
-			}
+			// 1. Сначала определяем "базовый" диапазон текущего элемента (текст или блок кода)
+			let range = this.getCodeBlockRange(docText, pos);
 
-			// Находим обычные границы предложения
-			let start = 0;
-			let end = docText.length;
+			if (!range) {
+				// Если не блок кода, ищем границы обычного предложения
+				let start = 0;
+				let end = docText.length;
+				const boundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
 
-			// Ищем границы предложений во всем тексте
-			const boundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
-
-			// Ищем ближайшую границу СЛЕВА (начало предложения)
-			const matchesBefore = Array.from(docText.substring(0, pos).matchAll(boundaryRegex));
-			if (matchesBefore.length > 0) {
-				const lastMatch = matchesBefore[matchesBefore.length - 1];
-				if (lastMatch === undefined) return null;
-				start = lastMatch.index! + lastMatch[0].length;
-			}
-
-			// Ищем ближайшую границу СПРАВА (конец предложения)
-			boundaryRegex.lastIndex = pos;
-			const matchAfter = boundaryRegex.exec(docText);
-			if (matchAfter) {
-				end = matchAfter[1] ? matchAfter.index + 1 : matchAfter.index;
-			}
-
-			// Проверяем, не заканчивается ли предыдущее предложение на двоеточие
-			// Для этого смотрим на текст перед start
-			const beforeText = docText.substring(Math.max(0, start - 50), start);
-			const endsWithColon = /:\s*$/.test(beforeText);
-
-			if (endsWithColon) {
-				// Если заканчивается на двоеточие, ищем следующий конец предложения
-				// Пропускаем блоки кода, которые могут быть между
-				let nextEnd = end;
-				let tempPos = end;
-
-				// Ищем следующий конец предложения, пропуская блоки кода
-				while (tempPos < docText.length) {
-					const tempBoundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
-					tempBoundaryRegex.lastIndex = tempPos;
-					const nextMatch = tempBoundaryRegex.exec(docText);
-
-					if (nextMatch) {
-						nextEnd = nextMatch[1] ? nextMatch.index + 1 : nextMatch.index;
-						// Проверяем, не находится ли этот конец внутри блока кода
-						const potentialCodeBlock = this.getCodeBlockRange(docText, nextEnd - 1);
-						if (!potentialCodeBlock) {
-							// Нашли следующий конец предложения вне блока кода
-							end = nextEnd;
-							break;
-						} else {
-							// Пропускаем блок кода
-							tempPos = potentialCodeBlock.to;
-						}
-					} else {
-						nextEnd = docText.length;
-						end = nextEnd;
-						break;
-					}
+				const matchesBefore = Array.from(docText.substring(0, pos).matchAll(boundaryRegex));
+				if (matchesBefore.length > 0) {
+					start = matchesBefore[matchesBefore.length - 1].index! + matchesBefore[matchesBefore.length - 1][0].length;
 				}
+
+				boundaryRegex.lastIndex = pos;
+				const matchAfter = boundaryRegex.exec(docText);
+				if (matchAfter) {
+					end = matchAfter.index + (matchAfter[1] ? 1 : 0);
+				}
+				range = { from: start, to: end };
 			}
 
-			return {
-				from: Math.max(0, start),
-				to: Math.min(docText.length, end)
-			};
+			// 2. САМАЯ ВАЖНАЯ ЧАСТЬ: проверка на двоеточие ПЕРЕД текущим диапазоном
+			// Смотрим на текст прямо перед началом найденного диапазона
+			const textBefore = docText.substring(Math.max(0, range.from - 50), range.from).trim();
+
+			if (textBefore.endsWith(':')) {
+				// Если перед нами двоеточие, значит текущий блок — это продолжение.
+				// Ищем начало того предложения, которое закончилось этим двоеточием.
+				let prevStart = 0;
+				const boundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
+				const matchesEvenBefore = Array.from(docText.substring(0, range.from - 1).matchAll(boundaryRegex));
+
+				if (matchesEvenBefore.length > 0) {
+					prevStart = matchesEvenBefore[matchesEvenBefore.length - 1].index! + matchesEvenBefore[matchesEvenBefore.length - 1][0].length;
+				}
+
+				// Объединяем: от начала вводной фразы до конца текущего блока
+				return { from: prevStart, to: range.to };
+			}
+
+			return range;
 		}
 
 		if (mode === ScanMode.Paragraph) {
