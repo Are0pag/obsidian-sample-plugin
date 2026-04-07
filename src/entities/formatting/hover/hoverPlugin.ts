@@ -178,15 +178,17 @@ export const hoverPlugin = (
 				}
 
 				const range = scanner.getRange(view.state, pos, getMode());
+				// Защита: если range.from === range.to, считаем что диапазона нет
+				const validRange = range && range.to > range.from ? range : null;
+
 				this.currentPos = pos;
-				this.currentRange = range;
+				this.currentRange = validRange;
 
 				// ЛОГИКА "РИСОВАНИЯ": если 'c' зажата и мы нашли диапазон под мышкой
-				if (this.isCPressed && range) {
-					this.applyTextCleanup(view, range);
+				if (this.isCPressed && validRange) {
+					this.applyTextCleanup(view, validRange);
 				} else {
-					// Обычная подсветка
-					view.dispatch({ effects: setHoverRange.of(range) });
+					view.dispatch({ effects: setHoverRange.of(validRange) }); // Обычная подсветка
 				}
 			},
 
