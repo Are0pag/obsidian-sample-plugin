@@ -18,15 +18,18 @@ export class TextScanner {
 		const docText = state.doc.toString();
 
 		if (mode === ScanMode.Sentence) {
-			console.log("v-03")
-			const docText = state.doc.toString();
+			// Сначала проверим, не находимся ли мы внутри блока кода
+			const codeBlockRange = this.getCodeBlockRange(docText, pos);
+			if (codeBlockRange) {
+				return codeBlockRange;
+			}
 
-			// 1. Ищем границы предложений во всем тексте
-			// Границей считаем: (.!?), за которыми идет пробел и заглавная буква, ИЛИ начало/конец строки
-			const boundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
-
+			// Находим обычные границы предложения
 			let start = 0;
 			let end = docText.length;
+
+			// Ищем границы предложений во всем тексте
+			const boundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
 
 			// Ищем ближайшую границу СЛЕВА (начало предложения)
 			const matchesBefore = Array.from(docText.substring(0, pos).matchAll(boundaryRegex));
@@ -40,8 +43,44 @@ export class TextScanner {
 			boundaryRegex.lastIndex = pos;
 			const matchAfter = boundaryRegex.exec(docText);
 			if (matchAfter) {
-				// Если это знак препинания, включаем его в диапазон, если перенос строки — нет
 				end = matchAfter[1] ? matchAfter.index + 1 : matchAfter.index;
+			}
+
+			// Проверяем, не заканчивается ли предыдущее предложение на двоеточие
+			// Для этого смотрим на текст перед start
+			const beforeText = docText.substring(Math.max(0, start - 50), start);
+			const endsWithColon = /:\s*$/.test(beforeText);
+
+			if (endsWithColon) {
+				// Если заканчивается на двоеточие, ищем следующий конец предложения
+				// Пропускаем блоки кода, которые могут быть между
+				let nextEnd = end;
+				let tempPos = end;
+
+				// Ищем следующий конец предложения, пропуская блоки кода
+				while (tempPos < docText.length) {
+					const tempBoundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
+					tempBoundaryRegex.lastIndex = tempPos;
+					const nextMatch = tempBoundaryRegex.exec(docText);
+
+					if (nextMatch) {
+						nextEnd = nextMatch[1] ? nextMatch.index + 1 : nextMatch.index;
+						// Проверяем, не находится ли этот конец внутри блока кода
+						const potentialCodeBlock = this.getCodeBlockRange(docText, nextEnd - 1);
+						if (!potentialCodeBlock) {
+							// Нашли следующий конец предложения вне блока кода
+							end = nextEnd;
+							break;
+						} else {
+							// Пропускаем блок кода
+							tempPos = potentialCodeBlock.to;
+						}
+					} else {
+						nextEnd = docText.length;
+						end = nextEnd;
+						break;
+					}
+				}
 			}
 
 			return {
@@ -49,7 +88,6 @@ export class TextScanner {
 				to: Math.min(docText.length, end)
 			};
 		}
-
 
 		if (mode === ScanMode.Paragraph) {
 			const start = docText.lastIndexOf('\n\n', pos - 1);
@@ -59,6 +97,24 @@ export class TextScanner {
 				to: end === -1 ? docText.length : end
 			};
 		}
+		return null;
+	}
+
+	// Новый метод для определения блока кода с любым языком
+	private getCodeBlockRange(text: string, pos: number): { from: number; to: number } | null {
+		// Ищем все блоки кода: ```language и закрывающие ```
+		const codeBlockRegex = /```\w*\n[\s\S]*?```/g;
+		let match;
+
+		while ((match = codeBlockRegex.exec(text)) !== null) {
+			const from = match.index;
+			const to = match.index + match[0].length;
+
+			if (pos >= from && pos <= to) {
+				return { from, to };
+			}
+		}
+
 		return null;
 	}
 }
