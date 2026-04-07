@@ -18,26 +18,38 @@ export class TextScanner {
 		const docText = state.doc.toString();
 
 		if (mode === ScanMode.Sentence) {
-			const stopChars = /[.!?](\s+|$)/g;
-			let start = 0;
-			let lastMatch;
+			console.log("v-03")
+			const docText = state.doc.toString();
 
-			// Ищем начало (ближайший стоп-символ слева)
-			const textBefore = docText.substring(0, pos);
-			const matchesBefore = Array.from(textBefore.matchAll(stopChars));
+			// 1. Ищем границы предложений во всем тексте
+			// Границей считаем: (.!?), за которыми идет пробел и заглавная буква, ИЛИ начало/конец строки
+			const boundaryRegex = /([.!?]\s+(?=[A-ZА-ЯЁ]))|(\n+)/g;
+
+			let start = 0;
+			let end = docText.length;
+
+			// Ищем ближайшую границу СЛЕВА (начало предложения)
+			const matchesBefore = Array.from(docText.substring(0, pos).matchAll(boundaryRegex));
 			if (matchesBefore.length > 0) {
-				const last = matchesBefore[matchesBefore.length - 1];
-				if (last === undefined) return null;
-				start = last.index! + last[0].length;
+				const lastMatch = matchesBefore[matchesBefore.length - 1];
+				if (lastMatch === undefined) return null;
+				start = lastMatch.index! + lastMatch[0].length;
 			}
 
-			// Ищем конец (ближайший стоп-символ справа)
-			stopChars.lastIndex = pos;
-			const matchAfter = stopChars.exec(docText);
-			const end = matchAfter ? matchAfter.index + matchAfter[0].trim().length : docText.length;
+			// Ищем ближайшую границу СПРАВА (конец предложения)
+			boundaryRegex.lastIndex = pos;
+			const matchAfter = boundaryRegex.exec(docText);
+			if (matchAfter) {
+				// Если это знак препинания, включаем его в диапазон, если перенос строки — нет
+				end = matchAfter[1] ? matchAfter.index + 1 : matchAfter.index;
+			}
 
-			return { from: start, to: end };
+			return {
+				from: Math.max(0, start),
+				to: Math.min(docText.length, end)
+			};
 		}
+
 
 		if (mode === ScanMode.Paragraph) {
 			const start = docText.lastIndexOf('\n\n', pos - 1);
