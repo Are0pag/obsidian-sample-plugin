@@ -90,6 +90,7 @@ export default class LinkTypology extends Plugin {
 		this.registerEditorExtension([
 			hoverField,
 			hoverPlugin(
+				this.app,
 				this.scanner,
 				this.distributor,
 				() => this.currentMode,
