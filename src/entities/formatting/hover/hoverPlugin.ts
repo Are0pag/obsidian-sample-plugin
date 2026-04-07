@@ -64,6 +64,7 @@ export const hoverPlugin = (
 			mouseleave(event: MouseEvent, view: EditorView) {
 				// Снимаем подсветку, когда мышь уходит из окна редактора
 				view.dispatch({ effects: setHoverRange.of(null) });
+				this.currentRange = null;
 			},
 
 			mousedown(event: MouseEvent, view: EditorView) {
@@ -101,7 +102,46 @@ export const hoverPlugin = (
 					const lastPart = view.state.sliceDoc(pos, range.to);
 					textReadinessCallback([firstPart, lastPart]);
 				}
+			},
 
-			}
+			keydown(event: KeyboardEvent, view: EditorView) {
+				if (!isEnabled()) return false; // Разрешаем стандартный ввод, если плагин выключен
+
+				if (this.currentRange) {
+					switch (event.key) {
+						case "c":
+						case "с": { // Блок { } нужен, чтобы переменные не конфликтовали с другими case
+							event.preventDefault();
+							const { from, to } = this.currentRange;
+							const oldText = view.state.sliceDoc(from, to);
+
+							// Ищем заглавную, если нет — любую букву
+							let firstIdx = oldText.search(/[A-ZА-ЯЁ]/);
+							if (firstIdx === -1) {
+								firstIdx = oldText.search(/[a-zа-яё]/i);
+							}
+
+							const newText = firstIdx !== -1 ? oldText.slice(firstIdx) : "";
+
+							if (newText !== oldText) {
+								view.dispatch({
+									changes: { from, to, insert: newText },
+									// Обновляем визуальную подсветку сразу в этой же транзакции
+									effects: setHoverRange.of(newText ? { from, to: from + newText.length } : null)
+								});
+
+								// Обновляем состояние плагина, чтобы он "помнил" новый диапазон
+								this.currentRange = newText
+									? { from, to: from + newText.length }
+									: null;
+							}
+							return true;
+						}
+
+					}
+				}
+
+				return false; // Важно: разрешаем стандартную обработку для всех остальных случаев
+			},
 		}
 	});
