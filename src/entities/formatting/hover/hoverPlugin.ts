@@ -22,6 +22,29 @@ export const hoverPlugin = (
 		currentPos: number | null = null;
 		//lastRange: {from: number, to: number} | null = null;
 		lastSelectionAnchor: number | null = null;
+		isCPressed = false;
+
+		applyTextCleanup(view: EditorView, range: { from: number, to: number }) {
+			const oldText = view.state.sliceDoc(range.from, range.to);
+
+			let firstIdx = oldText.search(/[A-ZА-ЯЁ]/);
+			if (firstIdx === -1) {
+				firstIdx = oldText.search(/[a-zа-яё]/i);
+			}
+
+			const newText = firstIdx !== -1 ? oldText.slice(firstIdx) : "";
+
+			if (newText !== oldText) {
+				const newTo = range.from + newText.length;
+				view.dispatch({
+					changes: { from: range.from, to: range.to, insert: newText },
+					effects: setHoverRange.of(newText ? { from: range.from, to: newTo } : null)
+				});
+
+				// Обновляем текущий диапазон, так как текст укоротился
+				this.currentRange = newText ? { from: range.from, to: newTo } : null;
+			}
+		}
 
 		// для ручного указания границ части текста
 		update(update: ViewUpdate) {
@@ -43,7 +66,7 @@ export const hoverPlugin = (
 		eventHandlers: {
 			mousemove(event: MouseEvent, view: EditorView) {
 				if (!isEnabled()) return;
-				// Превращаем координаты мыши в позицию в тексте
+
 				const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
 				if (pos == null) {
 					view.dispatch({ effects: setHoverRange.of(null) });
@@ -51,20 +74,45 @@ export const hoverPlugin = (
 				}
 
 				const range = scanner.getRange(view.state, pos, getMode());
-
-				view.dispatch({
-					effects: setHoverRange.of(range),
-					//selection: range ? { anchor: range.from } : undefined
-				});
 				this.currentPos = pos;
 				this.currentRange = range;
-				//this.lastSelectionAnchor = range ? range.from : null;
+
+				// ЛОГИКА "РИСОВАНИЯ": если 'c' зажата и мы нашли диапазон под мышкой
+				if (this.isCPressed && range) {
+					this.applyTextCleanup(view, range);
+				} else {
+					// Обычная подсветка
+					view.dispatch({ effects: setHoverRange.of(range) });
+				}
+			},
+
+			keydown(event: KeyboardEvent, view: EditorView) {
+				if (!isEnabled()) return false;
+
+				if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "с") {
+					this.isCPressed = true;
+
+					// Если уже наведены на что-то, применяем сразу при нажатии
+					if (this.currentRange) {
+						event.preventDefault();
+						this.applyTextCleanup(view, this.currentRange);
+						return true;
+					}
+				}
+				return false;
+			},
+
+			keyup(event: KeyboardEvent) {
+				if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "с") {
+					this.isCPressed = false;
+				}
 			},
 
 			mouseleave(event: MouseEvent, view: EditorView) {
-				// Снимаем подсветку, когда мышь уходит из окна редактора
 				view.dispatch({ effects: setHoverRange.of(null) });
 				this.currentRange = null;
+				// На всякий случай сбрасываем флаг, если мышь ушла, а keyup не сработал
+				this.isCPressed = false;
 			},
 
 			mousedown(event: MouseEvent, view: EditorView) {
@@ -102,46 +150,6 @@ export const hoverPlugin = (
 					const lastPart = view.state.sliceDoc(pos, range.to);
 					textReadinessCallback([firstPart, lastPart]);
 				}
-			},
-
-			keydown(event: KeyboardEvent, view: EditorView) {
-				if (!isEnabled()) return false; // Разрешаем стандартный ввод, если плагин выключен
-
-				if (this.currentRange) {
-					switch (event.key) {
-						case "c":
-						case "с": { // Блок { } нужен, чтобы переменные не конфликтовали с другими case
-							event.preventDefault();
-							const { from, to } = this.currentRange;
-							const oldText = view.state.sliceDoc(from, to);
-
-							// Ищем заглавную, если нет — любую букву
-							let firstIdx = oldText.search(/[A-ZА-ЯЁ]/);
-							if (firstIdx === -1) {
-								firstIdx = oldText.search(/[a-zа-яё]/i);
-							}
-
-							const newText = firstIdx !== -1 ? oldText.slice(firstIdx) : "";
-
-							if (newText !== oldText) {
-								view.dispatch({
-									changes: { from, to, insert: newText },
-									// Обновляем визуальную подсветку сразу в этой же транзакции
-									effects: setHoverRange.of(newText ? { from, to: from + newText.length } : null)
-								});
-
-								// Обновляем состояние плагина, чтобы он "помнил" новый диапазон
-								this.currentRange = newText
-									? { from, to: from + newText.length }
-									: null;
-							}
-							return true;
-						}
-
-					}
-				}
-
-				return false; // Важно: разрешаем стандартную обработку для всех остальных случаев
 			},
 		}
 	});
