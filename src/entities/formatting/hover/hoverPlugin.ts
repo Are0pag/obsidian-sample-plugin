@@ -138,16 +138,14 @@ export const hoverPlugin = (
 			);
 
 			if (result.success) {
-				const can = confirm("Удалить исходный текст?");
-				if (can) {
-					view.dispatch({
-						changes: {
-							from: this.dragState.sourceRange!.from,
-							to: this.dragState.sourceRange!.to,
-							insert: ""
-						}
-					});
-				}
+				view.dispatch({
+					changes: [
+						// Удаляем исходный перетаскиваемый текст
+						{ from: this.dragState.sourceRange.from, to: this.dragState.sourceRange.to, insert: "" },
+						// Вставляем ссылку на месте цели
+						{ from: targetRange.from, to: targetRange.to, insert: `[[${result.fileName}]]` }
+					]
+				});
 			}
 			this.dragState.isDragging = false;
 			this.dragState.sourceRange = null;

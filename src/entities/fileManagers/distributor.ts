@@ -72,12 +72,16 @@ export class Distributor {
 
 			const sourceFile = this.app.workspace.getActiveFile();
 			if (sourceFile) // Заменяем исходный текст на ссылку в текущем документе
-				await this.replaceWithLink(sourceFile, sourceRange, fileName, sourceText);
+				return { success: true, newFile, fileName: fileName};
+				//await this.replaceWithLink(sourceFile, sourceRange, fileName, sourceText);
+			else {
+				throw new Error();
+			}
 
 			// Открываем новую заметку (опционально)
 			// await this.app.workspace.openLinkText(newFile.path, "");
 
-			return { success: true, newFile, linkText: `[[${fileName}]]` };
+			//return { success: true, newFile, linkText: `[[${fileName}]]` };
 
 		} catch (error) {
 			console.error("Ошибка при создании заметки:", error);
@@ -99,7 +103,6 @@ export class Distributor {
 		const before = content.slice(0, range.from);
 		const after = content.slice(range.to);
 		const newContent = before + `[[${linkName}]]` + after;
-
 		// Сохраняем изменения
 		await this.app.vault.modify(file, newContent);
 	}
