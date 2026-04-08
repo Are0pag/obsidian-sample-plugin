@@ -179,6 +179,7 @@ export const hoverPlugin = (
 							view.dispatch({ effects: setHoverRange.of(this.currentRange) });
 						}
 					}
+					return;
 				}
 
 				this.currentRange = validRange;
