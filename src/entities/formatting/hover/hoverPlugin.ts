@@ -1,5 +1,6 @@
 import {setHoverRange} from "./hover";
 import {EditorView, ViewPlugin, ViewUpdate} from "@codemirror/view";
+import { Transaction } from "@codemirror/state";
 import {ScanMode, TextScanner} from "../scanning/scanner";
 import {Distributor} from "../../fileManagers/distributor";
 import {App, TFile} from "obsidian";
@@ -23,9 +24,11 @@ export const hoverPlugin = (
 
 		public currentRange: { from: number, to: number } | null = null;
 		currentPos: number | null = null;
+		mergedRanges: Array<TextRange> = [];
 		lastSelectionAnchor: number | null = null;
 		isCPressed = false;
 		isRPressed = false;
+		isMPressed = false;
 
 		dragState: DragState = {
 			isDragging: false,
@@ -162,6 +165,21 @@ export const hoverPlugin = (
 				const validRange = range && range.to > range.from ? range : null;
 
 
+				if (this.isMPressed && validRange) {
+					if (!this.currentRange) {
+						this.currentRange = validRange;
+						this.mergedRanges = [validRange];
+					} else {
+						// Проверяем, что этот диапазон мы еще не добавляли
+						const lastRange = this.mergedRanges[this.mergedRanges.length - 1];
+						if (!lastRange) return;
+						if (validRange.from > lastRange.to) {
+							this.mergedRanges.push(validRange);
+							this.currentRange = { from: this.currentRange.from, to: validRange.to };
+							view.dispatch({ effects: setHoverRange.of(this.currentRange) });
+						}
+					}
+				}
 
 
 
@@ -193,6 +211,11 @@ export const hoverPlugin = (
 					return true;
 				}
 
+				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
+					this.isMPressed = true;
+					return true;
+				}
+
 				return false;
 			},
 
@@ -204,6 +227,48 @@ export const hoverPlugin = (
 				if ((event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") && this.dragState.isDragging) {
 					this.cancelR(view);
 				}
+
+				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
+					this.isMPressed = false;
+
+					if (this.mergedRanges.length < 2) return;
+
+					const changes = [];
+					// Итерируемся по промежуткам МЕЖДУ накопленными диапазонами
+					for (let i = 0; i < this.mergedRanges.length - 1; i++) {
+						const endOfCurrent = this.mergedRanges[i].to;
+						const startOfNext = this.mergedRanges[i + 1].from;
+
+						if (startOfNext > endOfCurrent) {
+							// Решаем, нужен ли пробел: берем символы на границах
+							const charBefore = view.state.sliceDoc(endOfCurrent - 1, endOfCurrent);
+							const charAfter = view.state.sliceDoc(startOfNext, startOfNext + 1);
+
+							// Если между ними нет пробела в исходном тексте, добавляем его
+							const needsSpace = /\S/.test(charBefore) && /\S/.test(charAfter);
+							const insertText = needsSpace ? " " : "";
+
+							changes.push({
+								from: endOfCurrent,
+								to: startOfNext,
+								insert: insertText
+							});
+						}
+					}
+
+					if (changes.length > 0) {
+						view.dispatch({
+							changes,
+							annotations: Transaction.userEvent.of("merge-ranges")
+						});
+					}
+
+					// Сброс состояния
+					this.mergedRanges = [];
+					this.currentRange = null;
+					view.dispatch({ effects: setHoverRange.of(null) });
+				}
+
 			},
 
 			mouseleave(event: MouseEvent, view: EditorView) {
