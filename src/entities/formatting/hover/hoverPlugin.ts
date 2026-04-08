@@ -59,6 +59,43 @@ export const hoverPlugin = (
 			}
 		}
 
+		applyTextMerging(view: EditorView) {
+			const changes = [];
+			// Итерируемся по промежуткам МЕЖДУ накопленными диапазонами
+			for (let i = 0; i < this.mergedRanges.length - 1; i++) {
+				const endOfCurrent = this.mergedRanges[i]?.to;
+				const startOfNext = this.mergedRanges[i + 1]?.from;
+
+				if (startOfNext && endOfCurrent && startOfNext > endOfCurrent) {
+					// Решаем, нужен ли пробел: берем символы на границах
+					const charBefore = view.state.sliceDoc(endOfCurrent - 1, endOfCurrent);
+					const charAfter = view.state.sliceDoc(startOfNext, startOfNext + 1);
+
+					// Если между ними нет пробела в исходном тексте, добавляем его
+					const needsSpace = /\S/.test(charBefore) && /\S/.test(charAfter);
+					const insertText = needsSpace ? " " : "";
+
+					changes.push({
+						from: endOfCurrent,
+						to: startOfNext,
+						insert: insertText
+					});
+				}
+			}
+
+			if (changes.length > 0) {
+				view.dispatch({
+					changes,
+					annotations: Transaction.userEvent.of("merge-ranges")
+				});
+			}
+
+			// Сброс состояния
+			this.mergedRanges = [];
+			this.currentRange = null;
+			view.dispatch({ effects: setHoverRange.of(null) });
+		}
+
 		startDrag(view: EditorView, range: { from: number, to: number }, event: MouseEvent) {
 			const sourceText = view.state.sliceDoc(range.from, range.to);
 
@@ -228,43 +265,8 @@ export const hoverPlugin = (
 
 				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
 					this.isMPressed = false;
-
 					if (this.mergedRanges.length < 2) return;
-
-					const changes = [];
-					// Итерируемся по промежуткам МЕЖДУ накопленными диапазонами
-					for (let i = 0; i < this.mergedRanges.length - 1; i++) {
-						const endOfCurrent = this.mergedRanges[i]?.to;
-						const startOfNext = this.mergedRanges[i + 1]?.from;
-
-						if (startOfNext && endOfCurrent && startOfNext > endOfCurrent) {
-							// Решаем, нужен ли пробел: берем символы на границах
-							const charBefore = view.state.sliceDoc(endOfCurrent - 1, endOfCurrent);
-							const charAfter = view.state.sliceDoc(startOfNext, startOfNext + 1);
-
-							// Если между ними нет пробела в исходном тексте, добавляем его
-							const needsSpace = /\S/.test(charBefore) && /\S/.test(charAfter);
-							const insertText = needsSpace ? " " : "";
-
-							changes.push({
-								from: endOfCurrent,
-								to: startOfNext,
-								insert: insertText
-							});
-						}
-					}
-
-					if (changes.length > 0) {
-						view.dispatch({
-							changes,
-							annotations: Transaction.userEvent.of("merge-ranges")
-						});
-					}
-
-					// Сброс состояния
-					this.mergedRanges = [];
-					this.currentRange = null;
-					view.dispatch({ effects: setHoverRange.of(null) });
+					this.applyTextMerging(view);
 				}
 
 			},
