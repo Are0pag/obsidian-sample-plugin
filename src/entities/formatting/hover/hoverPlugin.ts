@@ -173,6 +173,7 @@ export const hoverPlugin = (
 			}
 			this.dragState.isDragging = false;
 			this.dragState.sourceRange = null;
+			this.cancelR(view);
 		}
 
 		cancelR(view: EditorView) {
@@ -182,6 +183,8 @@ export const hoverPlugin = (
 			this.dragState.isDragging = false;
 			this.isRPressed = false;
 			this.previousRange = null;
+			changeMode.setMode(ScanMode.Sentence);
+			console.log("changeMode.setMode(ScanMode.Sentence);")
 		}
 
 	}, {
@@ -249,7 +252,6 @@ export const hoverPlugin = (
 					}
 				}
 
-				// 1. Сначала проверяем саму клавишу R
 				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
 					// Если мы УЖЕ в процессе драга или под курсором есть текст для начала драга
 					if (this.dragState.isDragging || this.currentRange) {
@@ -258,7 +260,6 @@ export const hoverPlugin = (
 						return true;
 					}
 				}
-
 
 				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
 					this.isMPressed = true;
