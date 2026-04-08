@@ -163,16 +163,16 @@ export const hoverPlugin = (
 				const range = scanner.getRange(view.state, pos, getMode());
 				// Защита: если range.from === range.to, считаем что диапазона нет
 				const validRange = range && range.to > range.from ? range : null;
-
+				this.currentPos = pos;
 
 				if (this.isMPressed && validRange) {
-					if (!this.currentRange) {
+					if (this.mergedRanges.length < 1 /* !this.currentRange */) {
 						this.currentRange = validRange;
 						this.mergedRanges = [validRange];
 					} else {
 						// Проверяем, что этот диапазон мы еще не добавляли
 						const lastRange = this.mergedRanges[this.mergedRanges.length - 1];
-						if (!lastRange) return;
+						if (!lastRange || !this.currentRange) return;
 						if (validRange.from > lastRange.to) {
 							this.mergedRanges.push(validRange);
 							this.currentRange = { from: this.currentRange.from, to: validRange.to };
@@ -181,9 +181,6 @@ export const hoverPlugin = (
 					}
 				}
 
-
-
-				this.currentPos = pos;
 				this.currentRange = validRange;
 
 				if (this.isCPressed && validRange) {
@@ -236,10 +233,10 @@ export const hoverPlugin = (
 					const changes = [];
 					// Итерируемся по промежуткам МЕЖДУ накопленными диапазонами
 					for (let i = 0; i < this.mergedRanges.length - 1; i++) {
-						const endOfCurrent = this.mergedRanges[i].to;
-						const startOfNext = this.mergedRanges[i + 1].from;
+						const endOfCurrent = this.mergedRanges[i]?.to;
+						const startOfNext = this.mergedRanges[i + 1]?.from;
 
-						if (startOfNext > endOfCurrent) {
+						if (startOfNext && endOfCurrent && startOfNext > endOfCurrent) {
 							// Решаем, нужен ли пробел: берем символы на границах
 							const charBefore = view.state.sliceDoc(endOfCurrent - 1, endOfCurrent);
 							const charAfter = view.state.sliceDoc(startOfNext, startOfNext + 1);
