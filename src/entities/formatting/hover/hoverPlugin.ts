@@ -1,9 +1,9 @@
 import {setHoverRange} from "./hover";
-import {EditorView, ViewPlugin, ViewUpdate} from "@codemirror/view";
-import { Transaction } from "@codemirror/state";
+import {EditorView, ViewPlugin} from "@codemirror/view";
+import {Transaction} from "@codemirror/state";
 import {ScanMode, TextScanner} from "../scanning/scanner";
 import {Distributor} from "../../fileManagers/distributor";
-import {App, TFile} from "obsidian";
+import {App} from "obsidian";
 import {setHoverRefRange} from "./hoverRef";
 
 interface DragState {
@@ -54,25 +54,27 @@ export const hoverPlugin = (
 			return null;
 		}
 
+		// исп-ся для чистки лишнего перед предложениями в начале абзаца
 		applyTextCleanup(view: EditorView, range: { from: number, to: number }) {
 			const oldText = view.state.sliceDoc(range.from, range.to);
 
-			let firstIdx = oldText.search(/[A-ZА-ЯЁ]/);
-			if (firstIdx === -1) {
-				firstIdx = oldText.search(/[a-zа-яё]/i);
-			}
+			// Ищем индекс первой буквы ИЛИ начало ссылки [[
+			// Регулярное выражение ищет: любую букву (латиница/кириллица) ИЛИ символ '['
+			const firstIdx = oldText.search(/[A-ZА-ЯЁa-zа-яё\[]/i);
 
-			const newText = firstIdx !== -1 ? oldText.slice(firstIdx) : "";
+			if (firstIdx !== -1) {
+				// Отрезаем всё, что ДО найденного символа
+				const newText = oldText.slice(firstIdx);
 
-			if (newText !== oldText) {
-				const newTo = range.from + newText.length;
-				view.dispatch({
-					changes: { from: range.from, to: range.to, insert: newText },
-					effects: setHoverRange.of(newText ? { from: range.from, to: newTo } : null)
-				});
-
-				// Обновляем текущий диапазон, так как текст укоротился
-				this.currentRange = newText ? { from: range.from, to: newTo } : null;
+				if (newText !== oldText) {
+					const newTo = range.from + newText.length;
+					view.dispatch({
+						changes: { from: range.from, to: range.to, insert: newText },
+						effects: setHoverRange.of(newText ? { from: range.from, to: newTo } : null)
+					});
+					// Обновляем текущий диапазон, так как текст укоротился
+					this.currentRange = newText ? { from: range.from, to: newTo } : null;
+				}
 			}
 		}
 
@@ -217,8 +219,6 @@ export const hoverPlugin = (
 					]
 				});
 			}
-			this.dragState.isDragging = false;
-			this.dragState.sourceRange = null;
 			this.cancelR(view);
 		}
 
@@ -226,11 +226,14 @@ export const hoverPlugin = (
 			const ghost = document.getElementById('drag-ghost');
 			if (ghost) ghost.remove();
 			view.contentDOM.style.cursor = '';  // Теперь view доступен
-			this.dragState.isDragging = false;
 			this.isRPressed = false;
 			this.isChangeModeOnStartR = false;
 			changeMode.setMode(ScanMode.Sentence);
+			this.dragState.isDragging = false;
+			this.dragState.sourceRange = null;
 			setTimeout(() => this.fixSpacesAtPosition(this.view), 100);
+			const r = scanner.getRange(view.state, this.view.state.selection.main.head, ScanMode.Sentence)
+			if (r) setTimeout(() => this.applyTextCleanup(this.view, r), 100);
 		}
 
 	}, {
