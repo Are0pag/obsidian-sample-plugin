@@ -95,7 +95,7 @@ export default class LinkTypology extends Plugin {
 				this.app,
 				this.scanner,
 				this.distributor,
-				() => this.currentMode,
+				{getMode: () => this.currentMode, setMode: mode => {this.currentMode = mode}},
 				() => this.isDraftActive)
 		]);
 		this.registerDomEvent(document, 'pointerdown', (evt: PointerEvent) => {

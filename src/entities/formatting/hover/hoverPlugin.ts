@@ -17,7 +17,7 @@ export const hoverPlugin = (
 	app: App,
 	scanner: TextScanner,
 	distributor: Distributor,
-	getMode: () => ScanMode,
+	changeMode: {getMode: () => ScanMode, setMode: (mode: ScanMode) => void},
 	isEnabled: () => boolean
 ) =>
 	ViewPlugin.fromClass(class {
@@ -194,13 +194,14 @@ export const hoverPlugin = (
 					view.dispatch({ effects: setHoverRange.of(null) });
 					return;
 				}
-				const range = scanner.getRange(view.state, pos, getMode());
+				const range = scanner.getRange(view.state, pos, changeMode.getMode());
 				// Защита: если range.from === range.to, считаем что диапазона нет
 				const validRange = range && range.to > range.from ? range : null;
 				this.currentPos = pos;
 
 				if (this.isRPressed && this.dragState.isDragging && validRange) {
 					event.preventDefault();
+					changeMode.setMode(ScanMode.Word);
 					this.updateDragGhost(event.clientX, event.clientY);
 
 					view.dispatch({ effects: setHoverRefRange.of(validRange) });
@@ -257,6 +258,18 @@ export const hoverPlugin = (
 				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
 					this.isMPressed = true;
 					return true;
+				}
+
+				if (event.key.toLowerCase() === "s" || event.key.toLowerCase() === "ы") {
+					if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
+						changeMode.setMode(ScanMode.Sentence);
+					}
+				}
+
+				if (event.key.toLowerCase() === "w" || event.key.toLowerCase() === "ц") {
+					if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
+						changeMode.setMode(ScanMode.Word);
+					}
 				}
 
 				return false;
@@ -317,7 +330,7 @@ export const hoverPlugin = (
 						return;
 					}
 
-					const range = scanner.getRange(view.state, pos, getMode());
+					const range = scanner.getRange(view.state, pos, changeMode.getMode());
 					if (range === null) return;
 					view.dispatch({
 						effects: setHoverRange.of(range),
@@ -339,7 +352,7 @@ export const hoverPlugin = (
 					// Получаем целевой диапазон под курсором
 					const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
 					if (pos) {
-						const targetRange = scanner.getRange(view.state, pos, getMode());
+						const targetRange = scanner.getRange(view.state, pos, changeMode.getMode());
 						if (targetRange) {
 							const targetWord = view.state.sliceDoc(targetRange.from, targetRange.to);
 							this.finishDrag(view, targetRange, targetWord);
