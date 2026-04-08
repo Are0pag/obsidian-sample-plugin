@@ -56,23 +56,6 @@ export const hoverPlugin = (
 			}
 		}
 
-		// для ручного указания границ части текста
-		update(update: ViewUpdate) {
-			if (!isEnabled()) return;
-			// 1. Проверяем, изменилось ли выделение
-			if (update.selectionSet) {
-				// 2. Ищем транзакцию, вызванную именно мышью (pointer)
-				const isMouseClick = update.transactions.some(tr =>
-					tr.isUserEvent("select.pointer") || tr.isUserEvent("input.mouse")
-				);
-
-				if (isMouseClick) {
-					// Только если кликнули мышкой, обновляем наш кеш
-					this.lastSelectionAnchor = update.state.selection.main.anchor;
-				}
-			}
-		}
-
 		startDrag(view: EditorView, range: { from: number, to: number }, event: MouseEvent) {
 			const sourceText = view.state.sliceDoc(range.from, range.to);
 
@@ -163,8 +146,6 @@ export const hoverPlugin = (
 		eventHandlers: {
 			mousemove(event: MouseEvent, view: EditorView) {
 				if (!isEnabled()) return;
-
-				// Если идет перетаскивание, обновляем позицию призрака
 				if (this.isRPressed && this.dragState.isDragging) {
 					this.updateDragGhost(event.clientX, event.clientY);
 					event.preventDefault();
@@ -176,15 +157,17 @@ export const hoverPlugin = (
 					view.dispatch({ effects: setHoverRange.of(null) });
 					return;
 				}
-
 				const range = scanner.getRange(view.state, pos, getMode());
 				// Защита: если range.from === range.to, считаем что диапазона нет
 				const validRange = range && range.to > range.from ? range : null;
 
+
+
+
+
 				this.currentPos = pos;
 				this.currentRange = validRange;
 
-				// ЛОГИКА "РИСОВАНИЯ": если 'c' зажата и мы нашли диапазон под мышкой
 				if (this.isCPressed && validRange) {
 					this.applyTextCleanup(view, validRange);
 				} else {
