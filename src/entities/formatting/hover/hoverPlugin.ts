@@ -296,7 +296,7 @@ export const hoverPlugin = (
 
 				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
 					// Если мы УЖЕ в процессе драга или под курсором есть текст для начала драга
-					if (this.dragState.isDragging || this.currentRange) {
+					if (!this.isRPressed && this.dragState.isDragging || this.currentRange) {
 						this.isRPressed = true;
 						event.preventDefault();
 						return true;
@@ -412,6 +412,20 @@ export const hoverPlugin = (
 
 					this.isRPressed = false;
 				}
+			},
+
+			blur(event: FocusEvent, view: EditorView) {
+				// При потере фокуса окна сбрасываем всё состояние
+				if (this.dragState.isDragging) {
+					this.cancelR(view);
+				}
+				this.isRPressed = false;
+				this.isCPressed = false;
+				this.isMPressed = false;
+
+				// Опционально: скрываем подсветку
+				view.dispatch({ effects: setHoverRange.of(null) });
+				view.dispatch({ effects: setHoverRefRange.of(null) });
 			},
 		}
 	});
