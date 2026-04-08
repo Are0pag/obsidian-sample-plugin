@@ -327,8 +327,12 @@ export const hoverPlugin = (
 					this.isCPressed = false;
 				}
 
-				if ((event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") && this.dragState.isDragging) {
-					this.cancelR(view);
+				// ИСПРАВЛЕННЫЙ БЛОК:
+				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
+					this.isRPressed = false; // Сбрасываем ВСЕГДА при отпускании клавиши
+					if (this.dragState.isDragging) {
+						this.cancelR(view);
+					}
 				}
 
 				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
@@ -336,7 +340,6 @@ export const hoverPlugin = (
 					if (this.mergedRanges.length < 2) return;
 					this.applyTextMerging(view);
 				}
-
 			},
 
 			mouseleave(event: MouseEvent, view: EditorView) {
