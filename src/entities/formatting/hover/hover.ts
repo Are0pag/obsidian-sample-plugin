@@ -4,8 +4,7 @@ import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate } from "@
 // эффект подсветки
 export const setHoverRange = StateEffect.define<{from: number, to: number} | null>();
 
-// 2. Создаем "поле состояния" (хранилище)
-// Оно следит за эффектом и хранит саму декорацию (подсветку)
+// "поле состояния" (хранилище) следит за эффектом и хранит саму декорацию (подсветку)
 export const hoverField = StateField.define({
 	create() { return Decoration.none; },
 	update(underlines, tr) {

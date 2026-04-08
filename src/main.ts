@@ -13,6 +13,7 @@ import {Searcher} from "./entities/fileManagers/searcher";
 import {LinksMapProvider} from "./entities/linksManagers/linksMapProvider";
 import {StatusBarCodeScanOptions} from "./ui/statusBarItems/statusBarCodeScanOptions";
 import {DraftManager} from "./app/DraftManager";
+import {hoverRefField} from "./entities/formatting/hover/hoverRef";
 
 
 export default class LinkTypology extends Plugin {
@@ -89,6 +90,7 @@ export default class LinkTypology extends Plugin {
 		// Регистрируем расширения CodeMirror 6
 		this.registerEditorExtension([
 			hoverField,
+			hoverRefField,
 			hoverPlugin(
 				this.app,
 				this.scanner,

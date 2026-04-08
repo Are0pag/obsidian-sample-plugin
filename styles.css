@@ -4,6 +4,12 @@
 	border-bottom: 2px solid orange;
 }
 
+.cm-hover-highlight-ref {
+	background-color: rgba(155, 89, 182, 0.3) !important; /* Мягкий фиолетовый фон */
+	border-bottom: 2px solid #8e44ad; /* Насыщенный фиолетовый подчерк */
+}
+
+
 .mermaid {
 	display: flex;
 	justify-content: center;

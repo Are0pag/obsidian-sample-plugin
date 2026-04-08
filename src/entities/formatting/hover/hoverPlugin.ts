@@ -4,6 +4,7 @@ import { Transaction } from "@codemirror/state";
 import {ScanMode, TextScanner} from "../scanning/scanner";
 import {Distributor} from "../../fileManagers/distributor";
 import {App, TFile} from "obsidian";
+import {setHoverRefRange} from "./hoverRef";
 
 interface DragState {
 	isDragging: boolean;
@@ -25,7 +26,7 @@ export const hoverPlugin = (
 		public currentRange: { from: number, to: number } | null = null;
 		currentPos: number | null = null;
 		mergedRanges: Array<TextRange> = [];
-		lastSelectionAnchor: number | null = null;
+		previousRange: TextRange | null = null;
 		isCPressed = false;
 		isRPressed = false;
 		isMPressed = false;
@@ -180,17 +181,13 @@ export const hoverPlugin = (
 			view.contentDOM.style.cursor = '';  // Теперь view доступен
 			this.dragState.isDragging = false;
 			this.isRPressed = false;
+			this.previousRange = null;
 		}
 
 	}, {
 		eventHandlers: {
 			mousemove(event: MouseEvent, view: EditorView) {
 				if (!isEnabled()) return;
-				if (this.isRPressed && this.dragState.isDragging) {
-					this.updateDragGhost(event.clientX, event.clientY);
-					event.preventDefault();
-					return;
-				}
 
 				const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
 				if (pos == null) {
@@ -201,6 +198,17 @@ export const hoverPlugin = (
 				// Защита: если range.from === range.to, считаем что диапазона нет
 				const validRange = range && range.to > range.from ? range : null;
 				this.currentPos = pos;
+
+				if (this.isRPressed && this.dragState.isDragging && validRange) {
+					event.preventDefault();
+					this.updateDragGhost(event.clientX, event.clientY);
+
+					view.dispatch({ effects: setHoverRefRange.of(validRange) });
+					return;
+				}
+				else {
+					view.dispatch({ effects: setHoverRefRange.of(null) });
+				}
 
 				if (this.isMPressed && validRange) {
 					if (this.mergedRanges.length < 1 /* !this.currentRange */) {
