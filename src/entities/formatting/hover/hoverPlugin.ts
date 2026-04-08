@@ -249,11 +249,16 @@ export const hoverPlugin = (
 					}
 				}
 
-				if ((event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") && this.currentRange) {
-					this.isRPressed = true;
-					event.preventDefault();
-					return true;
+				// 1. Сначала проверяем саму клавишу R
+				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
+					// Если мы УЖЕ в процессе драга или под курсором есть текст для начала драга
+					if (this.dragState.isDragging || this.currentRange) {
+						this.isRPressed = true;
+						event.preventDefault();
+						return true;
+					}
 				}
+
 
 				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
 					this.isMPressed = true;
@@ -261,17 +266,16 @@ export const hoverPlugin = (
 				}
 
 				if (event.key.toLowerCase() === "s" || event.key.toLowerCase() === "ы") {
-					if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
+					if (this.isRPressed)
 						changeMode.setMode(ScanMode.Sentence);
-					}
+					return true;
 				}
 
 				if (event.key.toLowerCase() === "w" || event.key.toLowerCase() === "ц") {
-					if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
+					if (this.isRPressed)
 						changeMode.setMode(ScanMode.Word);
-					}
+					return true;
 				}
-
 				return false;
 			},
 
