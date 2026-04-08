@@ -327,9 +327,8 @@ export const hoverPlugin = (
 					this.isCPressed = false;
 				}
 
-				// ИСПРАВЛЕННЫЙ БЛОК:
 				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
-					this.isRPressed = false; // Сбрасываем ВСЕГДА при отпускании клавиши
+					this.isRPressed = false;
 					if (this.dragState.isDragging) {
 						this.cancelR(view);
 					}
