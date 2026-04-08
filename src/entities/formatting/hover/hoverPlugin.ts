@@ -38,6 +38,22 @@ export const hoverPlugin = (
 			startPos: { x: 0, y: 0 }
 		};
 
+		getCurrentContext(view: EditorView, event: MouseEvent) {
+			const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+			if (pos == null) {
+				view.dispatch({ effects: setHoverRange.of(null) });
+				return null;
+			}
+			this.currentPos = pos;
+
+			const range = scanner.getRange(view.state, pos, changeMode.getMode());
+			// Защита: если range.from === range.to, считаем что диапазона нет
+			const validRange = range && range.to > range.from ? range : null;
+			if (validRange)
+				return validRange;
+			return null;
+		}
+
 		applyTextCleanup(view: EditorView, range: { from: number, to: number }) {
 			const oldText = view.state.sliceDoc(range.from, range.to);
 
@@ -95,6 +111,36 @@ export const hoverPlugin = (
 			this.mergedRanges = [];
 			this.currentRange = null;
 			view.dispatch({ effects: setHoverRange.of(null) });
+		}
+
+		fixSpacesAtPosition(view: EditorView) {
+			const state = view.state;
+			const pos = this.view.state.selection.main.head;
+
+			const textBefore = state.sliceDoc(Math.max(0, pos - 100), pos);
+			const leftMatch = textBefore.match(/[.!?]\s+$/);
+			if (!leftMatch) return; // Если слева не конец предложения, выходим
+
+			const leftBoundary = pos - leftMatch[0].length + 1; // Позиция сразу ПОСЛЕ знака препинания
+
+			const textAfter = state.sliceDoc(pos, Math.min(state.doc.length, pos + 100));
+			const rightMatch = textAfter.match(/^\s+[\p{Lu}]/u);
+			if (!rightMatch) return; // Если справа не начало с заглавной, выходим
+
+			const rightBoundary = pos + rightMatch[0].length - 1; // Позиция ПЕРЕД заглавной буквой
+
+			const spacesBetween = state.sliceDoc(leftBoundary, rightBoundary);
+
+			if (spacesBetween.length > 1) {
+				view.dispatch({
+					changes: {
+						from: leftBoundary,
+						to: rightBoundary,
+						insert: " "
+					},
+					userEvent: "plugin.fix-spaces"
+				});
+			}
 		}
 
 		startDrag(view: EditorView, range: { from: number, to: number }, event: MouseEvent) {
@@ -184,22 +230,15 @@ export const hoverPlugin = (
 			this.isRPressed = false;
 			this.isChangeModeOnStartR = false;
 			changeMode.setMode(ScanMode.Sentence);
+			setTimeout(() => this.fixSpacesAtPosition(this.view), 100);
 		}
 
 	}, {
 		eventHandlers: {
 			mousemove(event: MouseEvent, view: EditorView) {
 				if (!isEnabled()) return;
-
-				const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-				if (pos == null) {
-					view.dispatch({ effects: setHoverRange.of(null) });
-					return;
-				}
-				const range = scanner.getRange(view.state, pos, changeMode.getMode());
-				// Защита: если range.from === range.to, считаем что диапазона нет
-				const validRange = range && range.to > range.from ? range : null;
-				this.currentPos = pos;
+				const validRange = this.getCurrentContext(view, event);
+				if (!validRange) return;
 
 				if (this.isRPressed && this.dragState.isDragging && validRange) {
 					if (!this.isChangeModeOnStartR) {
@@ -250,6 +289,7 @@ export const hoverPlugin = (
 					if (this.currentRange) {
 						event.preventDefault();
 						this.applyTextCleanup(view, this.currentRange);
+						this.fixSpacesAtPosition(this.view);
 						return true;
 					}
 				}
@@ -372,6 +412,6 @@ export const hoverPlugin = (
 
 					this.isRPressed = false;
 				}
-			}
+			},
 		}
 	});
