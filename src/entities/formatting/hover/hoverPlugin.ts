@@ -26,7 +26,7 @@ export const hoverPlugin = (
 		public currentRange: { from: number, to: number } | null = null;
 		currentPos: number | null = null;
 		mergedRanges: Array<TextRange> = [];
-		previousRange: TextRange | null = null;
+		isChangeModeOnStartR = false;
 		isCPressed = false;
 		isRPressed = false;
 		isMPressed = false;
@@ -182,9 +182,8 @@ export const hoverPlugin = (
 			view.contentDOM.style.cursor = '';  // Теперь view доступен
 			this.dragState.isDragging = false;
 			this.isRPressed = false;
-			this.previousRange = null;
+			this.isChangeModeOnStartR = false;
 			changeMode.setMode(ScanMode.Sentence);
-			console.log("changeMode.setMode(ScanMode.Sentence);")
 		}
 
 	}, {
@@ -203,10 +202,13 @@ export const hoverPlugin = (
 				this.currentPos = pos;
 
 				if (this.isRPressed && this.dragState.isDragging && validRange) {
-					event.preventDefault();
-					changeMode.setMode(ScanMode.Word);
-					this.updateDragGhost(event.clientX, event.clientY);
+					if (!this.isChangeModeOnStartR) {
+						this.isChangeModeOnStartR = true;
+						changeMode.setMode(ScanMode.Word);
+					}
 
+					event.preventDefault();
+					this.updateDragGhost(event.clientX, event.clientY);
 					view.dispatch({ effects: setHoverRefRange.of(validRange) });
 					return;
 				}
