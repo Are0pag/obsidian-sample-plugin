@@ -14,9 +14,12 @@ import {LinksMapProvider} from "./entities/linksManagers/linksMapProvider";
 import {StatusBarCodeScanOptions} from "./ui/statusBarItems/statusBarCodeScanOptions";
 import {DraftManager} from "./app/DraftManager";
 import {hoverRefField} from "./entities/formatting/hover/hoverRef";
+import {LeafManager} from "./entities/leaf/leafManager";
+import {plugin} from "typescript-eslint";
 
 export default class LinkTypology extends Plugin {
 	settings: PluginSettings;
+	leafManager: LeafManager;
 	statusBarControl: StatusBarCodeScanOptions;
 	private statusBar: StatusBarCodeScanOptions;
 	private mermaidExt: MermaidExtentions;
@@ -35,6 +38,7 @@ export default class LinkTypology extends Plugin {
 		this.install();
 		this.setupHover();
 		this.setupSettings();
+		this.leafManager.SetupViewOnOpen(this);
 
 		this.app.workspace.onLayoutReady(async () => {
 			if (!await this.app.vault.adapter.exists('Content')) {
@@ -46,7 +50,7 @@ export default class LinkTypology extends Plugin {
 	}
 
 	private install() {
-
+		this.leafManager = new LeafManager();
 		this.scanner = new TextScanner();
 		this.mermaidExt = new MermaidExtentions(this.app);
 		this.syncer = new MermaidSyncer(this.app);
