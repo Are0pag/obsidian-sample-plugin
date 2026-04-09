@@ -15,7 +15,6 @@ import {StatusBarCodeScanOptions} from "./ui/statusBarItems/statusBarCodeScanOpt
 import {DraftManager} from "./app/DraftManager";
 import {hoverRefField} from "./entities/formatting/hover/hoverRef";
 
-
 export default class LinkTypology extends Plugin {
 	settings: PluginSettings;
 	statusBarControl: StatusBarCodeScanOptions;
@@ -35,7 +34,6 @@ export default class LinkTypology extends Plugin {
 		await this.loadSettings();
 		this.install();
 		this.setupHover();
-		this.setupIsDraftActive();
 		this.setupSettings();
 
 		this.app.workspace.onLayoutReady(async () => {
@@ -46,7 +44,6 @@ export default class LinkTypology extends Plugin {
 		//this.setupMermaidExtensions();
 
 	}
-
 
 	private install() {
 
@@ -74,19 +71,15 @@ export default class LinkTypology extends Plugin {
 		);
 	}
 
-	private setupIsDraftActive() {
-		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', (leaf) => {
-				const activeFile = this.app.workspace.getActiveFile();
-				this.isDraftActive = activeFile?.basename === DRAFT_FILE_NAME;
-			})
-		);
-
-		// Инициализируем при старте
-		this.isDraftActive = this.app.workspace.getActiveFile()?.basename === DRAFT_FILE_NAME;
-	}
-
 	private setupHover() {
+		window.addEventListener('keydown', (event) => {
+			if (event.code === 'CapsLock') {
+				event.preventDefault();
+				this.isDraftActive = !this.isDraftActive;
+			}
+		});
+		this.isDraftActive = false;
+
 		// Регистрируем расширения CodeMirror 6
 		this.registerEditorExtension([
 			hoverField,
