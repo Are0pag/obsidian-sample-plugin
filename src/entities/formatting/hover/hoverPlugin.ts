@@ -27,9 +27,10 @@ export const hoverPlugin = (
 		currentPos: number | null = null;
 		mergedRanges: Array<TextRange> = [];
 		isChangeModeOnStartR = false;
-		isCPressed = false;
-		isRPressed = false;
-		isMPressed = false;
+
+		isClearPressed = false;
+		isRefPressed = false;
+		isMergePressed = false;
 
 		dragState: DragState = {
 			isDragging: false,
@@ -226,7 +227,7 @@ export const hoverPlugin = (
 			const ghost = document.getElementById('drag-ghost');
 			if (ghost) ghost.remove();
 			view.contentDOM.style.cursor = '';  // Теперь view доступен
-			this.isRPressed = false;
+			this.isRefPressed = false;
 			this.isChangeModeOnStartR = false;
 			changeMode.setMode(ScanMode.Sentence);
 			this.dragState.isDragging = false;
@@ -243,7 +244,7 @@ export const hoverPlugin = (
 				const validRange = this.getCurrentContext(view, event);
 				if (!validRange) return;
 
-				if (this.isRPressed && this.dragState.isDragging && validRange) {
+				if (this.isRefPressed && this.dragState.isDragging && validRange) {
 					if (!this.isChangeModeOnStartR) {
 						this.isChangeModeOnStartR = true;
 						changeMode.setMode(ScanMode.Word);
@@ -258,7 +259,7 @@ export const hoverPlugin = (
 					view.dispatch({ effects: setHoverRefRange.of(null) });
 				}
 
-				if (this.isMPressed && validRange) {
+				if (this.isMergePressed && validRange) {
 					if (this.mergedRanges.length < 1 /* !this.currentRange */) {
 						this.currentRange = validRange;
 						this.mergedRanges = [validRange];
@@ -277,7 +278,7 @@ export const hoverPlugin = (
 
 				this.currentRange = validRange;
 
-				if (this.isCPressed && validRange) {
+				if (this.isClearPressed && validRange) {
 					this.applyTextCleanup(view, validRange);
 				} else {
 					view.dispatch({ effects: setHoverRange.of(validRange) }); // Обычная подсветка
@@ -288,7 +289,7 @@ export const hoverPlugin = (
 				if (!isEnabled()) return false;
 
 				if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "с") {
-					this.isCPressed = true;
+					this.isClearPressed = true;
 					if (this.currentRange) {
 						event.preventDefault();
 						this.applyTextCleanup(view, this.currentRange);
@@ -299,26 +300,26 @@ export const hoverPlugin = (
 
 				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
 					// Если мы УЖЕ в процессе драга или под курсором есть текст для начала драга
-					if (!this.isRPressed && this.dragState.isDragging || this.currentRange) {
-						this.isRPressed = true;
+					if (!this.isRefPressed && this.dragState.isDragging || this.currentRange) {
+						this.isRefPressed = true;
 						event.preventDefault();
 						return true;
 					}
 				}
 
 				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
-					this.isMPressed = true;
+					this.isMergePressed = true;
 					return true;
 				}
 
 				if (event.key.toLowerCase() === "s" || event.key.toLowerCase() === "ы") {
-					if (this.isRPressed)
+					if (this.isRefPressed)
 						changeMode.setMode(ScanMode.Sentence);
 					return true;
 				}
 
 				if (event.key.toLowerCase() === "w" || event.key.toLowerCase() === "ц") {
-					if (this.isRPressed)
+					if (this.isRefPressed)
 						changeMode.setMode(ScanMode.Word);
 					return true;
 				}
@@ -327,18 +328,18 @@ export const hoverPlugin = (
 
 			keyup(event: KeyboardEvent, view: EditorView) {
 				if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "с") {
-					this.isCPressed = false;
+					this.isClearPressed = false;
 				}
 
 				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
-					this.isRPressed = false;
+					this.isRefPressed = false;
 					if (this.dragState.isDragging) {
 						this.cancelR(view);
 					}
 				}
 
 				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
-					this.isMPressed = false;
+					this.isMergePressed = false;
 					if (this.mergedRanges.length < 2) return;
 					this.applyTextMerging(view);
 				}
@@ -347,7 +348,7 @@ export const hoverPlugin = (
 			mouseleave(event: MouseEvent, view: EditorView) {
 				view.dispatch({ effects: setHoverRange.of(null) });
 				this.currentRange = null;
-				this.isCPressed = false;
+				this.isClearPressed = false;
 
 				if (this.dragState.isDragging) {
 					this.cancelR(view);
@@ -357,7 +358,7 @@ export const hoverPlugin = (
 			mousedown(event: MouseEvent, view: EditorView) {
 				if (!isEnabled()) return;
 
-				if (this.isRPressed && this.currentRange) {
+				if (this.isRefPressed && this.currentRange) {
 					event.preventDefault();
 					this.startDrag(view, this.currentRange, event);
 					return;
@@ -398,7 +399,7 @@ export const hoverPlugin = (
 			mouseup(event: MouseEvent, view: EditorView) {
 				if (!isEnabled()) return;
 
-				if (this.dragState.isDragging && this.isRPressed) {
+				if (this.dragState.isDragging && this.isRefPressed) {
 					event.preventDefault();
 
 					// Получаем целевой диапазон под курсором
@@ -415,7 +416,7 @@ export const hoverPlugin = (
 						this.finishDrag(view, null, '');
 					}
 
-					this.isRPressed = false;
+					this.isRefPressed = false;
 				}
 			},
 
@@ -424,9 +425,9 @@ export const hoverPlugin = (
 				if (this.dragState.isDragging) {
 					this.cancelR(view);
 				}
-				this.isRPressed = false;
-				this.isCPressed = false;
-				this.isMPressed = false;
+				this.isRefPressed = false;
+				this.isClearPressed = false;
+				this.isMergePressed = false;
 
 				// Опционально: скрываем подсветку
 				view.dispatch({ effects: setHoverRange.of(null) });
