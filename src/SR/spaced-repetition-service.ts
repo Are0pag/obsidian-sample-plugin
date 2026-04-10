@@ -57,27 +57,28 @@ export class SpacedRepetitionService {
 	 * Перевести заметку на следующий этап
 	 */
 	async promoteFile(file: TFile): Promise<void> {
+		// Получаем уже распарсенный фронтматтер из кэша
+		const cache = this.metadataCache.getFileCache(file);
+		const frontmatter = cache?.frontmatter;
+
+		if (!frontmatter) return;
+
+		const currentStage = frontmatter['stage'] || 0;
+		const nextStage = currentStage + 1;
+		const today = this.getTodayStr();
+		const nextReviewDate = this.calculateNextReviewDate(nextStage);
+
+		// Обновляем через process (как и было)
 		await this.vault.process(file, (data) => {
-			const frontmatter = this.extractFrontmatter(data);
-			debugger
-			if (!frontmatter) return data;
-
-			let currentStage = frontmatter['stage'] || 0;
-			const nextStage = currentStage + 1;
-
-			const today = this.getTodayStr();
-			const nextReviewDate = this.calculateNextReviewDate(nextStage);
-
-			const updatedData = this.updateFrontmatter(data, {
+			// А вот здесь парсить текст ВСЕ РАВНО придется,
+			// потому что process работает с сырым текстом
+			return this.updateFrontmatter(data, {
 				stage: nextStage,
 				reviewed: today,
 				next_review: nextReviewDate
 			});
-
-			return updatedData;
 		});
 	}
-
 	/**
 	 * Сбросить прогресс заметки (если забыл)
 	 */
@@ -111,26 +112,6 @@ export class SpacedRepetitionService {
 		let string = date.toISOString().split('T')[0];
 		if (!string) throw new RangeError();
 		return string;
-	}
-
-	private extractFrontmatter(data: string): FrontMatterCache | null {
-		const match = data.match(/^---\n([\s\S]*?)\n---/);
-		if (!match) return null;
-
-		// Упрощенный парсер YAML (в Obsidian API есть готовый, но здесь для примера)
-		const lines = match[1].split('\n');
-		const fm: any = {};
-		lines.forEach(line => {
-			const [key, ...valueParts] = line.split(':');
-			if (key) {
-				let value = valueParts.join(':').trim();
-				// Убираем кавычки если есть
-				value = value.replace(/^["']|["']$/g, '');
-				if (!isNaN(Number(value))) fm[key.trim()] = Number(value);
-				else fm[key.trim()] = value;
-			}
-		});
-		return fm;
 	}
 
 	private updateFrontmatter(data: string, updates: Record<string, any>): string {
