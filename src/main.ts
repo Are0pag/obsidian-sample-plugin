@@ -19,6 +19,7 @@ import {plugin} from "typescript-eslint";
 import {SpacedRepetitionService} from "./SR/spaced-repetition-service";
 import {SetupMemory} from "./SR/sr-setup";
 import {InlineCodeDetector} from "./entities/formatting/autodetection/code/inline-code-detector";
+import {TextCleaner} from "./entities/formatting/autodetection/cleaner";
 
 export default class LinkTypology extends Plugin {
 	settings: PluginSettings;
@@ -42,6 +43,7 @@ export default class LinkTypology extends Plugin {
 		SetupMemory(this);
 		this.install();
 		this.setupHover();
+		new TextCleaner().register(this);
 		new InlineCodeDetector().register(this);
 		this.leafManager.SetupViewOnOpen(this);
 
