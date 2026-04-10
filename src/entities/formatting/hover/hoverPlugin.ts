@@ -46,6 +46,8 @@ export const hoverPlugin = (
 			Clear: { Eng: "c", Rus: "с" },
 			Ref:   { Eng: "r", Rus: "к" },
 			Merge: { Eng: "m", Rus: "ь" },
+			Separate: { Eng: "s", Rus: "ы" },
+
 			RefModifiers: {
 				Sentence: { Eng: "s", Rus: "ы" },
 				Word:     { Eng: "w", Rus: "ц" }
@@ -92,8 +94,36 @@ export const hoverPlugin = (
 			}
 		}
 
+		applySeparator(view: EditorView, range: { from: number, to: number }) {
+			const doc = view.state.doc;
+			const text = view.state.sliceDoc(range.from, range.to);
+
+			// Проверяем символы до и после диапазона
+			const charBefore = range.from > 0 ? doc.sliceString(range.from - 1, range.from) : "\n";
+			const charAfter = range.to < doc.length ? doc.sliceString(range.to, range.to + 1) : "\n";
+
+			let insertText = text;
+			let from = range.from;
+			let to = range.to;
+
+			// Если текст уже отделен переносами строк, добавляем пустые строки (двойной перенос)
+			if (charBefore === "\n" && charAfter === "\n") {
+				insertText = `\n${text}\n`;
+			}
+			// Если текст внутри строки, просто выносим его на новые строки
+			else {
+				const prefix = charBefore === "\n" ? "" : "\n";
+				const suffix = charAfter === "\n" ? "" : "\n";
+				insertText = `${prefix}${text}${suffix}`;
+			}
+
+			view.dispatch({
+				changes: { from, to, insert: insertText },
+				annotations: Transaction.userEvent.of("plugin.separator")
+			});
+		}
+
 		applyTextMerging(view: EditorView) {
-			debugger
 			const changes = [];
 			// Итерируемся по промежуткам МЕЖДУ накопленными диапазонами
 			for (let i = 0; i < this.mergedRanges.length - 1; i++) {
@@ -329,6 +359,12 @@ export const hoverPlugin = (
 				if (this.isKey(event, this.HOTKEYS.RefModifiers.Sentence)) {
 					if (this.isRefPressed)
 						changeMode.setMode(ScanMode.Sentence);
+					else if (this.currentRange) {
+						// Если R не нажата, но есть выделение — срабатывает сепаратор
+						event.preventDefault();
+						this.applySeparator(view, this.currentRange);
+						return true;
+					}
 					return true;
 				}
 

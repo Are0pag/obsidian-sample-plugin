@@ -7,6 +7,7 @@ interface HoverHotKey {
 	Clear: KeyMap;
 	Ref: KeyMap;
 	Merge: KeyMap;
+	Separate: KeyMap;
 
 	RefModifiers: {
 		Sentence: KeyMap;
