@@ -5,7 +5,6 @@ export const REVIEW_VIEW_TYPE = 'ebbinghaus-review-view';
 
 export class ReviewListView extends ItemView {
 	private service: SpacedRepetitionService;
-	//private containerEl: HTMLElement;
 
 	constructor(leaf: WorkspaceLeaf, service: SpacedRepetitionService) {
 		super(leaf);
@@ -50,10 +49,20 @@ export class ReviewListView extends ItemView {
 			const item = list.createEl('li', { cls: 'review-item' });
 
 			// Ссылка на заметку (открывается в активной вкладке, контекст не теряется!)
-			const link = item.createEl('a', {
+			const link = item.createEl('span', {
 				text: file.basename,
-				cls: 'internal-link',
-				href: file.path
+				cls: 'review-link' // свой класс вместо internal-link
+			});
+
+			link.addEventListener('click', async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+
+				await this.app.workspace.openLinkText(
+					file.path,
+					'',         // пустая строка = открыть в активном листе
+					false       // не создавать новую вкладку, использовать текущую
+				);
 			});
 
 			// Кнопка "Повторил" (переводит на следующий этап)

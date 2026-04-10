@@ -57,7 +57,6 @@ export class SpacedRepetitionService {
 	 * Перевести заметку на следующий этап
 	 */
 	async promoteFile(file: TFile): Promise<void> {
-		// Получаем уже распарсенный фронтматтер из кэша
 		const cache = this.metadataCache.getFileCache(file);
 		const frontmatter = cache?.frontmatter;
 
@@ -68,10 +67,7 @@ export class SpacedRepetitionService {
 		const today = this.getTodayStr();
 		const nextReviewDate = this.calculateNextReviewDate(nextStage);
 
-		// Обновляем через process (как и было)
 		await this.vault.process(file, (data) => {
-			// А вот здесь парсить текст ВСЕ РАВНО придется,
-			// потому что process работает с сырым текстом
 			return this.updateFrontmatter(data, {
 				stage: nextStage,
 				reviewed: today,
