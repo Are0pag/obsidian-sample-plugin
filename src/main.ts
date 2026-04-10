@@ -18,6 +18,7 @@ import {LeafManager} from "./entities/leaf/leafManager";
 import {plugin} from "typescript-eslint";
 import {SpacedRepetitionService} from "./SR/spaced-repetition-service";
 import {SetupMemory} from "./SR/sr-setup";
+import {InlineCodeDetector} from "./entities/formatting/autodetection/code/inline-code-detector";
 
 export default class LinkTypology extends Plugin {
 	settings: PluginSettings;
@@ -37,10 +38,11 @@ export default class LinkTypology extends Plugin {
 	async onload() {
 		console.clear();
 		await this.loadSettings();
+		this.setupSettings();
 		SetupMemory(this);
 		this.install();
 		this.setupHover();
-		this.setupSettings();
+		new InlineCodeDetector().register(this);
 		this.leafManager.SetupViewOnOpen(this);
 
 		this.app.workspace.onLayoutReady(async () => {
