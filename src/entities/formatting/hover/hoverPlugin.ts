@@ -39,6 +39,19 @@ export const hoverPlugin = (
 			startPos: { x: 0, y: 0 }
 		};
 
+		isKey = (event: KeyboardEvent, keyMap: KeyMap) =>
+			event.key.toLowerCase() === keyMap.Eng || event.key.toLowerCase() === keyMap.Rus;
+
+		HOTKEYS: HoverHotKey = {
+			Clear: { Eng: "c", Rus: "с" },
+			Ref:   { Eng: "r", Rus: "к" },
+			Merge: { Eng: "m", Rus: "ь" },
+			RefModifiers: {
+				Sentence: { Eng: "s", Rus: "ы" },
+				Word:     { Eng: "w", Rus: "ц" }
+			}
+		};
+
 		getCurrentContext(view: EditorView, event: MouseEvent) {
 			const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
 			if (pos == null) {
@@ -80,6 +93,7 @@ export const hoverPlugin = (
 		}
 
 		applyTextMerging(view: EditorView) {
+			debugger
 			const changes = [];
 			// Итерируемся по промежуткам МЕЖДУ накопленными диапазонами
 			for (let i = 0; i < this.mergedRanges.length - 1; i++) {
@@ -288,7 +302,7 @@ export const hoverPlugin = (
 			keydown(event: KeyboardEvent, view: EditorView) {
 				if (!isEnabled()) return false;
 
-				if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "с") {
+				if (this.isKey(event, this.HOTKEYS.Clear)) {
 					this.isClearPressed = true;
 					if (this.currentRange) {
 						event.preventDefault();
@@ -298,7 +312,7 @@ export const hoverPlugin = (
 					}
 				}
 
-				if (event.key.toLowerCase() === "r" || event.key.toLowerCase() === "к") {
+				if (this.isKey(event, this.HOTKEYS.Ref)) {
 					// Если мы УЖЕ в процессе драга или под курсором есть текст для начала драга
 					if (!this.isRefPressed && this.dragState.isDragging || this.currentRange) {
 						this.isRefPressed = true;
@@ -307,18 +321,18 @@ export const hoverPlugin = (
 					}
 				}
 
-				if ((event.key.toLowerCase() === "m" || event.key.toLowerCase() === "ь")) {
+				if ((this.isKey(event, this.HOTKEYS.Merge))) {
 					this.isMergePressed = true;
 					return true;
 				}
 
-				if (event.key.toLowerCase() === "s" || event.key.toLowerCase() === "ы") {
+				if (this.isKey(event, this.HOTKEYS.RefModifiers.Sentence)) {
 					if (this.isRefPressed)
 						changeMode.setMode(ScanMode.Sentence);
 					return true;
 				}
 
-				if (event.key.toLowerCase() === "w" || event.key.toLowerCase() === "ц") {
+				if (this.isKey(event, this.HOTKEYS.RefModifiers.Word)) {
 					if (this.isRefPressed)
 						changeMode.setMode(ScanMode.Word);
 					return true;
