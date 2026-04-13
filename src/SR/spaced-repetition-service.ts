@@ -91,19 +91,16 @@ export class SpacedRepetitionService {
 
 
 	private registerEvents(): void {
-		// При изменении метаданных файла
 		this.metadataCache.on('changed', (file) => {
 			this.invalidateFile(file);
 		});
 
-		// При переименовании
 		this.vault.on('rename', (file) => {
 			if (file instanceof TFile) {
 				this.invalidateFile(file);
 			}
 		});
 
-		// При удалении
 		this.vault.on('delete', (file) => {
 			if (file instanceof TFile) {
 				this.allFilesCache.delete(file.path);
@@ -111,7 +108,6 @@ export class SpacedRepetitionService {
 			}
 		});
 
-		// При создании нового файла
 		this.vault.on('create', (file) => {
 			if (file instanceof TFile) {
 				this.indexFile(file);
@@ -156,6 +152,10 @@ export class SpacedRepetitionService {
 			this.indexFile(file);
 		}
 
+		this.updateDueFilesCache();
+	}
+
+	private updateDueFilesCache(): void {
 		const today = this.getTodayStr();
 
 		this.dueFilesCache = Array.from(this.allFilesCache.values())
@@ -167,19 +167,6 @@ export class SpacedRepetitionService {
 
 		this.cacheValid = true;
 	}
-
-	// private updateDueFilesCache(): void {
-	// 	const today = this.getTodayStr();
-	//
-	// 	this.dueFilesCache = Array.from(this.allFilesCache.values())
-	// 		.filter(info => {
-	// 			// Заметка требует повторения, если nextReview <= today
-	// 			return info.nextReview <= today;
-	// 		})
-	// 		.sort((a, b) => a.nextReview.localeCompare(b.nextReview));
-	//
-	// 	this.cacheValid = true;
-	// }
 
 	onCacheUpdate?: () => void;
 
