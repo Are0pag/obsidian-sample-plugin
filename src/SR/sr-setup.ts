@@ -44,35 +44,31 @@ function createContinueCommand(plugin: Plugin, service: SpacedRepetitionService)
 			const activeFile = plugin.app.workspace.getActiveFile();
 			if (!activeFile) return false;
 
-			const dueFiles = service.getDueFiles();
-			const currentIndex = dueFiles.findIndex(f => f.path === activeFile.path);
-			if (currentIndex === -1) return false;
+			// Используем кэш сервиса вместо повторного getDueFiles()
+			const fileInfo = service.getFileInfo(activeFile);
+			if (!fileInfo) return false;
+
+			// Проверяем, что файл действительно требует повторения
+			const today = new Date().toISOString().split('T')[0];
+			if (today && fileInfo.nextReview > today) return false;
 
 			if (!checking) {
 				const currentFilePath = activeFile.path;
-				// Создаём одноразовый обработчик обновления метаданных
+
 				const metadataHandler = plugin.app.metadataCache.on('changed', (file) => {
 					if (file.path === currentFilePath) {
-						// Метаданные обновились, можно продолжать
 						plugin.app.metadataCache.offref(metadataHandler);
 
-						const updatedDueFiles = service.getDueFiles();
-						const remainingFiles = updatedDueFiles.filter(f => f.path !== currentFilePath);
+						const updatedDueFiles = service.getDueFiles(); // Теперь кэш свежий
+						const remainingFiles = updatedDueFiles.filter(f => f.file.path !== currentFilePath);
 
 						if (remainingFiles[0]) {
-							plugin.app.workspace.openLinkText(remainingFiles[0].path, '', false);
-						}
-
-						// Обновляем представление
-						const reviewView = plugin.app.workspace.getLeavesOfType(REVIEW_VIEW_TYPE)[0]?.view;
-						if (reviewView instanceof ReviewListView) {
-							reviewView.render();
+							plugin.app.workspace.openLinkText(remainingFiles[0].file.path, '', false);
 						}
 					}
 				});
 
-				// Запускаем обновление
-				service.promoteFile(activeFile);
+				service.promoteFile(activeFile); // Запускаем асинхронное обновление
 			}
 
 			return true;

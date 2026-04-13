@@ -1,58 +1,53 @@
-import { TFile, Vault, MetadataCache, FrontMatterCache } from 'obsidian';
+import {TFile, Vault, MetadataCache, FrontMatterCache, Notice} from 'obsidian';
 
 export interface ReviewInfo {
+	file: TFile;
 	stage: number;
-	reviewed: string; // YYYY-MM-DD
-	nextReview: string | null;
+	nextReview: string;
+	reviewed: string;
+	diaryTime?: string; // HH:mm:ss из тега diary
 }
 
 export class SpacedRepetitionService {
+	private vault: Vault;
+	private metadataCache: MetadataCache;
 	private intervals: number[] = [1, 3, 7, 14, 30];
 
-	constructor(
-		private vault: Vault,
-		private metadataCache: MetadataCache
-	) {}
+	private allFilesCache: Map<string, ReviewInfo> = new Map(); // все заметки, наблюдаемые плагином
+	private dueFilesCache: ReviewInfo[] = []; // заметки для текущего повторения
+	private cacheValid = false;
+
+	private today: string;
+
+	constructor(vault: Vault, metadataCache: MetadataCache) {
+		this.vault = vault;
+		this.metadataCache = metadataCache;
+		this.today = this.getTodayStr();
+
+		//this.registerEvents();
+		this.rebuildCache();
+	}
 
 	/**
 	 * Получить список файлов, которые нужно повторить сегодня
 	 */
-	getDueFiles(): TFile[] {
-		const today = this.getTodayStr();
-		const files: TFile[] = [];
-
-		// Проходим по всем .md файлам в хранилище
-		const allFiles = this.vault.getMarkdownFiles();
-
-		for (const file of allFiles) {
-			const metadata = this.metadataCache.getFileCache(file);
-			const frontmatter = metadata?.frontmatter;
-
-			if (!frontmatter) continue;
-
-			// Если есть next_review и оно совпадает с сегодня или раньше (на случай если вчера не заходили)
-			const nextReview = frontmatter['next_review'];
-			console.log("Next Review Value:", nextReview, "Type:", typeof nextReview);
-			if (nextReview && nextReview <= today) {
-				files.push(file);
-			}
+	getDueFiles(): ReviewInfo[] {
+		if (!this.cacheValid) {
+			this.updateDueFilesCache();
 		}
-		return files;
+		return this.dueFilesCache;
 	}
 
 	/**
 	 * Перевести заметку на следующий этап
 	 */
 	async promoteFile(file: TFile): Promise<void> {
-		const cache = this.metadataCache.getFileCache(file);
-		const frontmatter = cache?.frontmatter;
+		const info = this.allFilesCache.get(file.path);
+		if (!info) return;
 
-		if (!frontmatter) return;
-
-		const currentStage = frontmatter['stage'] || 0;
-		const nextStage = currentStage + 1;
-		const today = this.getTodayStr();
+		const nextStage = info.stage + 1;
 		const nextReviewDate = this.calculateNextReviewDate(nextStage);
+		const today = this.getTodayStr();
 
 		await this.vault.process(file, (data) => {
 			return this.updateFrontmatter(data, {
@@ -61,7 +56,17 @@ export class SpacedRepetitionService {
 				next_review: nextReviewDate
 			});
 		});
+
+		const updatedInfo = this.indexFile(file);
+		if (updatedInfo)
+			this.dueFilesCache = this.dueFilesCache.filter(
+				info => info.file.path !== file.path
+			);
+
+		this.cacheValid = true;
+		this.onCacheUpdate?.();
 	}
+
 	/**
 	 * Сбросить прогресс заметки (если забыл)
 	 */
@@ -75,9 +80,124 @@ export class SpacedRepetitionService {
 		});
 	}
 
+	getFileInfo(file: TFile): ReviewInfo | null {
+		return this.allFilesCache.get(file.path) || null;
+	}
+
+
+	private registerEvents(): void {
+		this.metadataCache.on('changed', (file) => {
+			this.invalidateFile(file);
+		});
+
+		this.vault.on('rename', (file) => {
+			if (file instanceof TFile) {
+				this.invalidateFile(file);
+			}
+		});
+
+		this.vault.on('delete', (file) => {
+			if (file instanceof TFile) {
+				this.allFilesCache.delete(file.path);
+				this.cacheValid = false;
+			}
+		});
+
+		this.vault.on('create', (file) => {
+			if (file instanceof TFile) {
+				this.cacheValid = false;
+				this.indexFile(file);
+				this.onCacheUpdate?.();
+				this.cacheValid = true;
+			}
+		});
+	}
+
 	/**
-	 * Вычислить дату следующего повторения
+	 * Доб/обновление данных о файле
+	 * @param file
+	 * @private
 	 */
+	private indexFile(file: TFile): ReviewInfo | null {
+		const metadata = this.metadataCache.getFileCache(file);
+		const frontmatter = metadata?.frontmatter;
+
+		if (frontmatter && typeof frontmatter.stage === 'number') {
+			const info: ReviewInfo = {
+				file,
+				stage: frontmatter.stage,
+				nextReview: frontmatter.next_review || this.getTodayStr(),
+				reviewed: frontmatter.reviewed || '',
+				diaryTime: this.extractDiaryTime(frontmatter)
+			};
+			this.allFilesCache.set(file.path, info);
+
+			if (frontmatter.next_review <= this.today)
+				this.dueFilesCache.push(info);
+
+			return info;
+		}
+
+		//this.allFilesCache.delete(file.path); - макс. идиотский сценарий, так что пусть лучшая оптимизация
+		return null;
+	}
+
+	private invalidateFile(file: TFile): void {
+		this.cacheValid = false;
+		const info = this.indexFile(file);
+		this.cacheValid = true;
+
+		// Можно emit событие для UI
+		this.onCacheUpdate?.();
+	}
+
+	private rebuildCache(): void {
+		this.allFilesCache.clear();
+		const markdownFiles = this.vault.getMarkdownFiles();
+
+		for (const file of markdownFiles) {
+			this.indexFile(file);
+		}
+
+		this.updateDueFilesCache();
+	}
+
+	private updateDueFilesCache(): void {
+		this.dueFilesCache = Array.from(this.allFilesCache.values())
+			.filter(info => {
+				// Заметка требует повторения, если nextReview <= today
+				return info.nextReview <= this.today;
+			})
+			//.sort((a, b) => a.nextReview.localeCompare(b.nextReview));
+			.sort((a, b) => {
+				// 1. Сначала сравниваем по дате
+				const dateCompare = a.nextReview.localeCompare(b.nextReview);
+				if (dateCompare !== 0) {
+					return dateCompare;
+				}
+
+				// 2. Если даты одинаковые — сортируем по времени из diary
+				const timeA = a.diaryTime;
+				const timeB = b.diaryTime;
+
+				// Обе имеют время — сравниваем
+				if (timeA && timeB) {
+					const timeCompare = timeA.localeCompare(timeB);
+					if (timeCompare !== 0) {
+						return timeCompare;
+					}
+				}
+
+				// 3. Если всё одинаково — по имени файла для стабильности
+				return a.file.basename.localeCompare(b.file.basename);
+			});
+
+		this.cacheValid = true;
+	}
+
+	onCacheUpdate?: () => void;
+
+
 	private calculateNextReviewDate(stage: number): string {
 		//if (stage <= 0) return this.getDateStrDaysAgo(1);
 
@@ -142,5 +262,17 @@ export class SpacedRepetitionService {
 			throw new Error(`Не удалось вычислить дату для значения: ${days} дн. назад`);
 
 		return dateStr;
+	}
+
+	private extractDiaryTime(frontmatter: FrontMatterCache) {
+		if (frontmatter?.diary && typeof frontmatter.diary === 'string') {
+			const timeMatch = frontmatter.diary.match(/(\d{2}:\d{2}:\d{2})/);
+			if (timeMatch) {
+				return timeMatch[1];
+			}
+		}
+
+		new Notice("Have not dairy property");
+		return;
 	}
 }
