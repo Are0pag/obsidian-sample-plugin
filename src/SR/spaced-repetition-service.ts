@@ -56,7 +56,14 @@ export class SpacedRepetitionService {
 			});
 		});
 
-		// Кэш обновится через событие 'changed'
+		const updatedInfo = this.indexFile(file);
+		if (updatedInfo)
+			this.dueFilesCache = this.dueFilesCache.filter(
+				info => info.file.path !== file.path
+			);
+
+		this.cacheValid = true;
+		this.onCacheUpdate?.();
 	}
 
 	/**

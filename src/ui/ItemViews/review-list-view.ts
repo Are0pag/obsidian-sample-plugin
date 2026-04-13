@@ -57,10 +57,7 @@ export class ReviewListView extends ItemView {
 		const dueFiles = this.service.getDueFiles();
 
 		if (dueFiles.length === 0) {
-			this.containerEl.createEl('div', {
-				text: '🎉 Нет заметок для повторения',
-				cls: 'review-empty'
-			});
+			this.contentEl.empty();
 			return;
 		}
 
