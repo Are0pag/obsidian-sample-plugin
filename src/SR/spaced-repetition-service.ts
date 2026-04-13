@@ -1,10 +1,11 @@
-import { TFile, Vault, MetadataCache, FrontMatterCache } from 'obsidian';
+import {TFile, Vault, MetadataCache, FrontMatterCache, Notice} from 'obsidian';
 
 export interface ReviewInfo {
 	file: TFile;
 	stage: number;
 	nextReview: string;
 	reviewed: string;
+	diaryTime?: string; // HH:mm:ss из тега diary
 }
 
 export class SpacedRepetitionService {
@@ -125,7 +126,8 @@ export class SpacedRepetitionService {
 				file,
 				stage: frontmatter.stage,
 				nextReview: frontmatter.next_review || this.getTodayStr(),
-				reviewed: frontmatter.reviewed || ''
+				reviewed: frontmatter.reviewed || '',
+				diaryTime: this.extractDiaryTime(frontmatter)
 			};
 			this.allFilesCache.set(file.path, info);
 
@@ -165,7 +167,29 @@ export class SpacedRepetitionService {
 				// Заметка требует повторения, если nextReview <= today
 				return info.nextReview <= this.today;
 			})
-			.sort((a, b) => a.nextReview.localeCompare(b.nextReview));
+			//.sort((a, b) => a.nextReview.localeCompare(b.nextReview));
+			.sort((a, b) => {
+				// 1. Сначала сравниваем по дате
+				const dateCompare = a.nextReview.localeCompare(b.nextReview);
+				if (dateCompare !== 0) {
+					return dateCompare;
+				}
+
+				// 2. Если даты одинаковые — сортируем по времени из diary
+				const timeA = a.diaryTime;
+				const timeB = b.diaryTime;
+
+				// Обе имеют время — сравниваем
+				if (timeA && timeB) {
+					const timeCompare = timeA.localeCompare(timeB);
+					if (timeCompare !== 0) {
+						return timeCompare;
+					}
+				}
+
+				// 3. Если всё одинаково — по имени файла для стабильности
+				return a.file.basename.localeCompare(b.file.basename);
+			});
 
 		this.cacheValid = true;
 	}
@@ -237,5 +261,18 @@ export class SpacedRepetitionService {
 			throw new Error(`Не удалось вычислить дату для значения: ${days} дн. назад`);
 
 		return dateStr;
+	}
+
+	private extractDiaryTime(frontmatter: FrontMatterCache) {
+		if (frontmatter?.diary && typeof frontmatter.diary === 'string') {
+			const timeMatch = frontmatter.diary.match(/(\d{2}:\d{2}:\d{2})/);
+			if (timeMatch) {
+				return timeMatch[1];
+			}
+		}
+
+		new Notice("Have not dairy property");
+		return;
+		//throw new Error("Have not dairy property");
 	}
 }
