@@ -271,8 +271,6 @@ export class SpacedRepetitionService {
 				return timeMatch[1];
 			}
 		}
-
-		new Notice("Have not dairy property");
 		return;
 	}
 }
