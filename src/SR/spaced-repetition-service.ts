@@ -1,18 +1,31 @@
 import { TFile, Vault, MetadataCache, FrontMatterCache } from 'obsidian';
 
-export interface ReviewInfo {
+interface ReviewInfo {
+	file: TFile;
 	stage: number;
-	reviewed: string; // YYYY-MM-DD
-	nextReview: string | null;
+	nextReview: string;
+	reviewed: string;
 }
 
 export class SpacedRepetitionService {
+	private vault: Vault;
+	private metadataCache: MetadataCache;
 	private intervals: number[] = [1, 3, 7, 14, 30];
 
-	constructor(
-		private vault: Vault,
-		private metadataCache: MetadataCache
-	) {}
+	private allFilesCache: Map<string, ReviewInfo> = new Map(); // все заметки, наблюдаемые плагином
+	private dueFilesCache: ReviewInfo[] = []; // заметки для текущего повторения
+	private cacheValid = false;
+
+	constructor(vault: Vault, metadataCache: MetadataCache) {
+		this.vault = vault;
+		this.metadataCache = metadataCache;
+
+		// Подписываемся на изменения файлов
+		this.registerEvents();
+
+		// Первоначальное построение кэша
+		this.rebuildCache();
+	}
 
 	/**
 	 * Получить список файлов, которые нужно повторить сегодня
@@ -32,7 +45,7 @@ export class SpacedRepetitionService {
 
 			// Если есть next_review и оно совпадает с сегодня или раньше (на случай если вчера не заходили)
 			const nextReview = frontmatter['next_review'];
-			console.log("Next Review Value:", nextReview, "Type:", typeof nextReview);
+			//console.log("Next Review Value:", nextReview, "Type:", typeof nextReview);
 			if (nextReview && nextReview <= today) {
 				files.push(file);
 			}
@@ -75,9 +88,102 @@ export class SpacedRepetitionService {
 		});
 	}
 
-	/**
-	 * Вычислить дату следующего повторения
-	 */
+
+
+	private registerEvents(): void {
+		// При изменении метаданных файла
+		this.metadataCache.on('changed', (file) => {
+			this.invalidateFile(file);
+		});
+
+		// При переименовании
+		this.vault.on('rename', (file) => {
+			if (file instanceof TFile) {
+				this.invalidateFile(file);
+			}
+		});
+
+		// При удалении
+		this.vault.on('delete', (file) => {
+			if (file instanceof TFile) {
+				this.allFilesCache.delete(file.path);
+				this.cacheValid = false;
+			}
+		});
+
+		// При создании нового файла
+		this.vault.on('create', (file) => {
+			if (file instanceof TFile) {
+				this.indexFile(file);
+				this.cacheValid = false;
+			}
+		});
+	}
+
+	private indexFile(file: TFile): ReviewInfo | null {
+		const metadata = this.metadataCache.getFileCache(file);
+		const frontmatter = metadata?.frontmatter;
+
+		// Проверяем, есть ли нужные поля
+		if (frontmatter && typeof frontmatter.stage === 'number') {
+			const info: ReviewInfo = {
+				file,
+				stage: frontmatter.stage,
+				nextReview: frontmatter.next_review || this.getTodayStr(),
+				reviewed: frontmatter.reviewed || ''
+			};
+			this.allFilesCache.set(file.path, info);
+			return info;
+		}
+
+		//this.allFilesCache.delete(file.path); - макс. идиотский сценарий, так что пусть лучшая оптимизация
+		return null;
+	}
+
+	private invalidateFile(file: TFile): void {
+		const info = this.indexFile(file);
+		this.cacheValid = false; // Проще инвалидировать весь кэш dueFiles
+
+		// Можно emit событие для UI
+		this.onCacheUpdate?.();
+	}
+
+	private rebuildCache(): void {
+		this.allFilesCache.clear();
+		const markdownFiles = this.vault.getMarkdownFiles();
+
+		for (const file of markdownFiles) {
+			this.indexFile(file);
+		}
+
+		const today = this.getTodayStr();
+
+		this.dueFilesCache = Array.from(this.allFilesCache.values())
+			.filter(info => {
+				// Заметка требует повторения, если nextReview <= today
+				return info.nextReview <= today;
+			})
+			.sort((a, b) => a.nextReview.localeCompare(b.nextReview));
+
+		this.cacheValid = true;
+	}
+
+	// private updateDueFilesCache(): void {
+	// 	const today = this.getTodayStr();
+	//
+	// 	this.dueFilesCache = Array.from(this.allFilesCache.values())
+	// 		.filter(info => {
+	// 			// Заметка требует повторения, если nextReview <= today
+	// 			return info.nextReview <= today;
+	// 		})
+	// 		.sort((a, b) => a.nextReview.localeCompare(b.nextReview));
+	//
+	// 	this.cacheValid = true;
+	// }
+
+	onCacheUpdate?: () => void;
+
+
 	private calculateNextReviewDate(stage: number): string {
 		//if (stage <= 0) return this.getDateStrDaysAgo(1);
 
