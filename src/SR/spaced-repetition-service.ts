@@ -16,56 +16,37 @@ export class SpacedRepetitionService {
 	private dueFilesCache: ReviewInfo[] = []; // заметки для текущего повторения
 	private cacheValid = false;
 
+	private today: string;
+
 	constructor(vault: Vault, metadataCache: MetadataCache) {
 		this.vault = vault;
 		this.metadataCache = metadataCache;
+		this.today = this.getTodayStr();
 
-		// Подписываемся на изменения файлов
 		this.registerEvents();
-
-		// Первоначальное построение кэша
 		this.rebuildCache();
 	}
 
 	/**
 	 * Получить список файлов, которые нужно повторить сегодня
 	 */
-	getDueFiles(): TFile[] {
-		const today = this.getTodayStr();
-		const files: TFile[] = [];
-
-		// Проходим по всем .md файлам в хранилище
-		const allFiles = this.vault.getMarkdownFiles();
-
-		for (const file of allFiles) {
-			const metadata = this.metadataCache.getFileCache(file);
-			const frontmatter = metadata?.frontmatter;
-
-			if (!frontmatter) continue;
-
-			// Если есть next_review и оно совпадает с сегодня или раньше (на случай если вчера не заходили)
-			const nextReview = frontmatter['next_review'];
-			//console.log("Next Review Value:", nextReview, "Type:", typeof nextReview);
-			if (nextReview && nextReview <= today) {
-				files.push(file);
-			}
+	getDueFiles(): ReviewInfo[] {
+		if (!this.cacheValid) {
+			this.updateDueFilesCache();
 		}
-		return files;
+		return this.dueFilesCache;
 	}
 
 	/**
 	 * Перевести заметку на следующий этап
 	 */
 	async promoteFile(file: TFile): Promise<void> {
-		const cache = this.metadataCache.getFileCache(file);
-		const frontmatter = cache?.frontmatter;
+		const info = this.allFilesCache.get(file.path);
+		if (!info) return;
 
-		if (!frontmatter) return;
-
-		const currentStage = frontmatter['stage'] || 0;
-		const nextStage = currentStage + 1;
-		const today = this.getTodayStr();
+		const nextStage = info.stage + 1;
 		const nextReviewDate = this.calculateNextReviewDate(nextStage);
+		const today = this.getTodayStr();
 
 		await this.vault.process(file, (data) => {
 			return this.updateFrontmatter(data, {
@@ -74,7 +55,10 @@ export class SpacedRepetitionService {
 				next_review: nextReviewDate
 			});
 		});
+
+		// Кэш обновится через событие 'changed'
 	}
+
 	/**
 	 * Сбросить прогресс заметки (если забыл)
 	 */
@@ -88,6 +72,9 @@ export class SpacedRepetitionService {
 		});
 	}
 
+	getFileInfo(file: TFile): ReviewInfo | null {
+		return this.allFilesCache.get(file.path) || null;
+	}
 
 
 	private registerEvents(): void {
@@ -116,6 +103,11 @@ export class SpacedRepetitionService {
 		});
 	}
 
+	/**
+	 * Доб/обновление данных о файле
+	 * @param file
+	 * @private
+	 */
 	private indexFile(file: TFile): ReviewInfo | null {
 		const metadata = this.metadataCache.getFileCache(file);
 		const frontmatter = metadata?.frontmatter;
@@ -129,6 +121,10 @@ export class SpacedRepetitionService {
 				reviewed: frontmatter.reviewed || ''
 			};
 			this.allFilesCache.set(file.path, info);
+
+			if (frontmatter.next_review <= this.today)
+				this.dueFilesCache.push(info);
+
 			return info;
 		}
 
@@ -137,8 +133,9 @@ export class SpacedRepetitionService {
 	}
 
 	private invalidateFile(file: TFile): void {
+		this.cacheValid = false;
 		const info = this.indexFile(file);
-		this.cacheValid = false; // Проще инвалидировать весь кэш dueFiles
+		this.cacheValid = true;
 
 		// Можно emit событие для UI
 		this.onCacheUpdate?.();
@@ -156,12 +153,10 @@ export class SpacedRepetitionService {
 	}
 
 	private updateDueFilesCache(): void {
-		const today = this.getTodayStr();
-
 		this.dueFilesCache = Array.from(this.allFilesCache.values())
 			.filter(info => {
 				// Заметка требует повторения, если nextReview <= today
-				return info.nextReview <= today;
+				return info.nextReview <= this.today;
 			})
 			.sort((a, b) => a.nextReview.localeCompare(b.nextReview));
 
