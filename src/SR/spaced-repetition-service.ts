@@ -24,7 +24,7 @@ export class SpacedRepetitionService {
 		this.metadataCache = metadataCache;
 		this.today = this.getTodayStr();
 
-		this.registerEvents();
+		//this.registerEvents();
 		this.rebuildCache();
 	}
 
@@ -105,8 +105,10 @@ export class SpacedRepetitionService {
 
 		this.vault.on('create', (file) => {
 			if (file instanceof TFile) {
-				this.indexFile(file);
 				this.cacheValid = false;
+				this.indexFile(file);
+				this.onCacheUpdate?.();
+				this.cacheValid = true;
 			}
 		});
 	}
@@ -120,7 +122,6 @@ export class SpacedRepetitionService {
 		const metadata = this.metadataCache.getFileCache(file);
 		const frontmatter = metadata?.frontmatter;
 
-		// Проверяем, есть ли нужные поля
 		if (frontmatter && typeof frontmatter.stage === 'number') {
 			const info: ReviewInfo = {
 				file,
@@ -273,6 +274,5 @@ export class SpacedRepetitionService {
 
 		new Notice("Have not dairy property");
 		return;
-		//throw new Error("Have not dairy property");
 	}
 }
