@@ -6,9 +6,6 @@ export interface ReviewInfo {
 	nextReview: string | null;
 }
 
-// Интервалы в днях
-//const Intervals = 1 | 3 | 7 | 14 | 30;
-
 export class SpacedRepetitionService {
 	private intervals: number[] = [1, 3, 7, 14, 30];
 
@@ -35,21 +32,11 @@ export class SpacedRepetitionService {
 
 			// Если есть next_review и оно совпадает с сегодня или раньше (на случай если вчера не заходили)
 			const nextReview = frontmatter['next_review'];
+			console.log("Next Review Value:", nextReview, "Type:", typeof nextReview);
 			if (nextReview && nextReview <= today) {
 				files.push(file);
 			}
-
-			// Также добавляем заметки, у которых stage === 0 и прошло больше 1 дня с создания,
-			// но next_review еще не проставлен (первичная инициализация).
-			// Это сгладит переход при первом запуске плагина.
-			if (frontmatter['stage'] === 0 && !nextReview) {
-				const reviewed = frontmatter['reviewed'];
-				if (reviewed && reviewed <= this.getDateStrDaysAgo(1)) {
-					files.push(file);
-				}
-			}
 		}
-
 		return files;
 	}
 

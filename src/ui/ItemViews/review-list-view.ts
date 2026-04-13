@@ -47,7 +47,7 @@ export class ReviewListView extends ItemView {
 		this.activeFilePath = activeFile?.path ?? null;
 	}
 
-	private render() {
+	public render() {
 		this.containerEl.empty();
 		const dueFiles = this.service.getDueFiles();
 

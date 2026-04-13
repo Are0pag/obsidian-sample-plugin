@@ -13,7 +13,75 @@ export function SetupMemory(plugin: Plugin) {
 	plugin.addRibbonIcon('brain', 'Открыть повторения Эббингауза', () => {
 		activateView(plugin);
 	});
+	createContinueCommand(plugin, service);
 
+	//additionalCommands(plugin, service);
+}
+
+async function activateView(plugin: Plugin) {
+	const { workspace } = plugin.app;
+
+	let leaf: WorkspaceLeaf | undefined | null = workspace.getLeavesOfType(REVIEW_VIEW_TYPE)[0];
+	if (!leaf) {
+		const leaf = workspace.getRightLeaf(false);
+		if (!leaf) return;
+		await leaf.setViewState({ type: REVIEW_VIEW_TYPE, active: true });
+	}
+
+	if (!leaf) return;
+	workspace.revealLeaf(leaf);
+}
+
+function createContinueCommand(plugin: Plugin, service: SpacedRepetitionService) {
+	plugin.addCommand({
+		id: 'mark-current-and-next',
+		name: 'Отметить текущую заметку как повторенную и открыть следующую',
+		hotkeys: [
+			{ modifiers: ['Alt'], key: '`' },
+			{ modifiers: ['Alt'], key: 'ë' }
+		],
+		checkCallback: (checking) => {
+			const activeFile = plugin.app.workspace.getActiveFile();
+			if (!activeFile) return false;
+
+			const dueFiles = service.getDueFiles();
+			const currentIndex = dueFiles.findIndex(f => f.path === activeFile.path);
+			if (currentIndex === -1) return false;
+
+			if (!checking) {
+				const currentFilePath = activeFile.path;
+				// Создаём одноразовый обработчик обновления метаданных
+				const metadataHandler = plugin.app.metadataCache.on('changed', (file) => {
+					if (file.path === currentFilePath) {
+						// Метаданные обновились, можно продолжать
+						plugin.app.metadataCache.offref(metadataHandler);
+
+						const updatedDueFiles = service.getDueFiles();
+						const remainingFiles = updatedDueFiles.filter(f => f.path !== currentFilePath);
+
+						if (remainingFiles[0]) {
+							plugin.app.workspace.openLinkText(remainingFiles[0].path, '', false);
+						}
+
+						// Обновляем представление
+						const reviewView = plugin.app.workspace.getLeavesOfType(REVIEW_VIEW_TYPE)[0]?.view;
+						if (reviewView instanceof ReviewListView) {
+							reviewView.render();
+						}
+					}
+				});
+
+				// Запускаем обновление
+				service.promoteFile(activeFile);
+			}
+
+			return true;
+		}
+	});
+}
+
+
+function additionalCommands(plugin: Plugin, service: SpacedRepetitionService) {
 	// Команда "Повторил" для текущей открытой заметки
 	plugin.addCommand({
 		id: 'promote-current-note',
@@ -37,18 +105,4 @@ export function SetupMemory(plugin: Plugin) {
 			}
 		}
 	});
-}
-
-async function activateView(plugin: Plugin) {
-	const { workspace } = plugin.app;
-
-	let leaf: WorkspaceLeaf | undefined | null = workspace.getLeavesOfType(REVIEW_VIEW_TYPE)[0];
-	if (!leaf) {
-		const leaf = workspace.getRightLeaf(false);
-		if (!leaf) return;
-		await leaf.setViewState({ type: REVIEW_VIEW_TYPE, active: true });
-	}
-
-	if (!leaf) return;
-	workspace.revealLeaf(leaf);
 }
