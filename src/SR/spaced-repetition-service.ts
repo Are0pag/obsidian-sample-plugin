@@ -1,6 +1,6 @@
 import { TFile, Vault, MetadataCache, FrontMatterCache } from 'obsidian';
 
-interface ReviewInfo {
+export interface ReviewInfo {
 	file: TFile;
 	stage: number;
 	nextReview: string;

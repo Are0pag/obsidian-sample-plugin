@@ -45,7 +45,7 @@ function createContinueCommand(plugin: Plugin, service: SpacedRepetitionService)
 			if (!activeFile) return false;
 
 			const dueFiles = service.getDueFiles();
-			const currentIndex = dueFiles.findIndex(f => f.path === activeFile.path);
+			const currentIndex = dueFiles.findIndex(f => f.file.path === activeFile.path);
 			if (currentIndex === -1) return false;
 
 			if (!checking) {
@@ -57,10 +57,10 @@ function createContinueCommand(plugin: Plugin, service: SpacedRepetitionService)
 						plugin.app.metadataCache.offref(metadataHandler);
 
 						const updatedDueFiles = service.getDueFiles();
-						const remainingFiles = updatedDueFiles.filter(f => f.path !== currentFilePath);
+						const remainingFiles = updatedDueFiles.filter(f => f.file.path !== currentFilePath);
 
 						if (remainingFiles[0]) {
-							plugin.app.workspace.openLinkText(remainingFiles[0].path, '', false);
+							plugin.app.workspace.openLinkText(remainingFiles[0].file.path, '', false);
 						}
 
 						// Обновляем представление
