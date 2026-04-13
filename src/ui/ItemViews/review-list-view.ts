@@ -5,6 +5,7 @@ export const REVIEW_VIEW_TYPE = 'ebbinghaus-review-view';
 
 export class ReviewListView extends ItemView {
 	private service: SpacedRepetitionService;
+	private activeFilePath: string | null = null;
 
 	constructor(leaf: WorkspaceLeaf, service: SpacedRepetitionService) {
 		super(leaf);
@@ -29,9 +30,24 @@ export class ReviewListView extends ItemView {
 
 		// Обновление списка каждую минуту (или при фокусе/изменении файла)
 		this.registerInterval(window.setInterval(() => this.render(), 60000));
+
+		// Отслеживание активного файла
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', () => {
+				this.updateActiveFile();
+				this.render();
+			})
+		);
+
+		this.updateActiveFile();
 	}
 
-	private render() {
+	private updateActiveFile() {
+		const activeFile = this.app.workspace.getActiveFile();
+		this.activeFilePath = activeFile?.path ?? null;
+	}
+
+	public render() {
 		this.containerEl.empty();
 		const dueFiles = this.service.getDueFiles();
 
@@ -48,49 +64,65 @@ export class ReviewListView extends ItemView {
 		dueFiles.forEach(file => {
 			const item = list.createEl('li', { cls: 'review-item' });
 
-			// Ссылка на заметку (открывается в активной вкладке, контекст не теряется!)
-			const link = item.createEl('span', {
-				text: file.basename,
-				cls: 'review-link' // свой класс вместо internal-link
-			});
+			// Подсветка активного файла
+			if (file.path === this.activeFilePath) {
+				item.addClass('is-active');
+			}
 
-			link.addEventListener('click', async (e) => {
-				e.preventDefault();
-				e.stopPropagation();
+			this.createLink(item, file);
 
-				await this.app.workspace.openLinkText(
-					file.path,
-					'',         // пустая строка = открыть в активном листе
-					false       // не создавать новую вкладку, использовать текущую
-				);
-			});
-
-			// Кнопка "Повторил" (переводит на следующий этап)
-			const doneBtn = item.createEl('button', {
-				text: '✓',
-				cls: 'review-done-btn'
-			});
-			doneBtn.onclick = async (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				await this.service.promoteFile(file);
-				this.render(); // Перерисовать список
-
-				// Маленький бонус: уведомление, которое не перекрывает интерфейс
-				// или можно просто убрать строку из списка
-			};
-
-			// Кнопка "Сбросить" (опционально, если забыл)
-			const resetBtn = item.createEl('button', {
-				text: '↺',
-				cls: 'review-reset-btn'
-			});
-			resetBtn.onclick = async (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				await this.service.resetFile(file);
-				this.render();
-			};
+			this.renderDoneBut(item, file);
+			this.renderResetBut(item, file);
 		});
+	}
+
+	/**
+	 * Ссылка на заметку (открывается в активной вкладке, контекст не теряется!)
+	 */
+	private createLink(item: HTMLLIElement, file: TFile) {
+		const link = item.createEl('span', {
+			text: file.basename,
+			cls: 'review-link' // свой класс вместо internal-link
+		});
+
+		link.addEventListener('click', async (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+
+			await this.app.workspace.openLinkText(
+				file.path,
+				'',         // пустая строка = открыть в активном листе
+				false       // не создавать новую вкладку, использовать текущую
+			);
+		});
+	}
+
+	private renderDoneBut(item: HTMLLIElement, file: TFile) {
+		const doneBtn = item.createEl('button', {
+			text: '✓',
+			cls: 'review-done-btn'
+		});
+		doneBtn.onclick = async (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			await this.service.promoteFile(file);
+			this.render(); // Перерисовать список
+		};
+	}
+
+	/**
+	 Кнопка "Сбросить" (опционально, если забыл)
+	 */
+	private renderResetBut(item: HTMLLIElement, file: TFile) {
+		const resetBtn = item.createEl('button', {
+			text: '↺',
+			cls: 'review-reset-btn'
+		});
+		resetBtn.onclick = async (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			await this.service.resetFile(file);
+			this.render();
+		};
 	}
 }
