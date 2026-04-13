@@ -27,6 +27,13 @@
 	margin-right: 10px;
 }
 
+.review-item.is-active {
+	background-color: rgba(255, 255, 255, 0.1); /* Полупрозрачный белый/серый */
+	border-left: 4px solid #705dcf;             /* Фиолетовый акцент */
+	padding-left: 8px;
+}
+
+
 .review-done-btn {
 	color: white;
 	border: none;
